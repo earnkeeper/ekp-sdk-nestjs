@@ -4,10 +4,6 @@ import axios from 'axios';
 import Bottleneck from 'bottleneck';
 import { validate } from 'bycontract';
 import { Cache } from 'cache-manager';
-import { Network, OpenSeaPort } from 'opensea-js';
-import { OpenSeaAsset } from 'opensea-js/lib/types';
-import { EkConfigService } from '../config/ek-config.service';
-import { EthersService } from '../ethers/ethers.service';
 import { LimiterService } from '../limiter.service';
 import { logger } from '../util';
 import { AssetContract } from './model';
@@ -16,22 +12,13 @@ const BASE_URL = 'https://api.opensea.io/api/v1';
 
 @Injectable()
 export class OpenseaService {
-  seaport: OpenSeaPort;
   limiter: Bottleneck;
 
   constructor(
-    configService: EkConfigService,
-    ethersService: EthersService,
     @Inject(CACHE_MANAGER) private cache: Cache,
     limiterService: LimiterService,
   ) {
     this.limiter = limiterService.createLimiter('opensea-limiter', 3);
-    const provider = ethersService.getProvider('eth');
-
-    this.seaport = new OpenSeaPort(provider, {
-      networkName: Network.Main,
-      apiKey: configService.openseaApiKey,
-    });
   }
 
   async metadataOf(contractAddress: string): Promise<AssetContract> {
@@ -61,11 +48,13 @@ export class OpenseaService {
     );
   }
 
-  async assetOf(tokenAddress: string, tokenId: string): Promise<OpenSeaAsset> {
+  // TODO: add an interface for this return type
+  async assetOf(tokenAddress: string, tokenId: string): Promise<any> {
     validate([tokenAddress], ['string']);
 
-    const cacheKey = `opensea.asset['${tokenAddress}', '${tokenId}]`;
-    const debugMessage = `Opensea > getAsset('${tokenAddress}', '${tokenId}')`;
+    const url = `${BASE_URL}/asset/${tokenAddress}/${tokenId}`;
+    const cacheKey = `opensea.assetOf['${tokenAddress}', '${tokenId}]`;
+    const debugMessage = `GET ${url}`;
 
     return this.cache.wrap(
       cacheKey,
@@ -75,9 +64,11 @@ export class OpenseaService {
             try {
               logger.debug(debugMessage);
 
-              return await this.seaport.api.getAsset({ tokenAddress, tokenId });
+              const result = await axios.get(url);
+
+              return result.data;
             } catch (error) {
-              if (error.message?.includes('404')) {
+              if (error.response.status === 404) {
                 return null;
               }
               throw error;

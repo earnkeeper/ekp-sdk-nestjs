@@ -11,6 +11,7 @@ export * from './label-wrapper.component';
 export * from './link.component';
 export * from './milestone-wrapper.component';
 export * from './page-header-tile.component';
+export * from './price-link.component';
 export * from './row.component';
 export * from './span.component';
 export * from './summary-stats.component';

@@ -21,13 +21,14 @@ export interface DatatableProps extends DefaultProps {
 }
 
 export interface DatatableColumn {
-  id: RpcOrPrimitive;
+  cell?: UiElement;
   filterable?: RpcOrPrimitive;
   grow?: Rpc | number;
+  id: RpcOrPrimitive;
+  label?: Rpc | string;
   name?: RpcOrPrimitive;
   right?: RpcOrPrimitive;
   sortable?: RpcOrPrimitive;
-  width?: Rpc | number | string;
   value?: RpcOrPrimitive;
-  cell?: UiElement;
+  width?: Rpc | number | string;
 }

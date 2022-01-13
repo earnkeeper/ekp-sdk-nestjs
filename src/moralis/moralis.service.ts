@@ -46,7 +46,7 @@ export class MoralisService {
   ): Promise<ERC20Price> {
     validate([chainId, tokenAddress], ['string', 'string']);
 
-    const cacheKey = `moralis.latestTokenPriceOf['${chainId}']['${tokenAddress}']`;
+    const cacheKey = `moralis.latestTokenPriceOf_['${chainId}']['${tokenAddress}']`;
     const debugMessage = `Web3API > getTokenPrice('${chainId}', '${tokenAddress}')`;
 
     return this.cache.wrap(
@@ -82,7 +82,7 @@ export class MoralisService {
           },
         ),
       {
-        ttl: 3600,
+        ttl: 300,
       },
     );
   }

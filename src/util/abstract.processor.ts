@@ -1,19 +1,34 @@
 import { Process } from '@nestjs/bull';
+import { Inject } from '@nestjs/common';
 import { Job } from 'bull';
 import { validate } from 'bycontract';
 import _ from 'lodash';
 import moment from 'moment';
 import * as Rx from 'rxjs';
+import { CurrencyDto } from '../socket/dtos/currency.dto';
+import { LayerDto } from '../socket/dtos/layer.dto';
+import { MilestoneDocumentDto } from '../socket/dtos/milestone.document.dto';
+import { EventService } from '../socket/event.service';
 import { ClientStateChangedEvent } from '../socket/events/client-state-changed.event';
+import { ChainId } from './ChainId';
 import { ChainMetadata } from './ChainMetadata';
-import { logErrors } from './logErrors';
 import { chains as allChains } from './chains';
 import { logger } from './default-logger';
-import { ChainId } from './ChainId';
-import { CurrencyDto } from '../socket/dtos/currency.dto';
+import { logErrors } from './logErrors';
 
-export abstract class AbstractProcessor<T extends BaseContext> {
-  protected validateEvent(event: ClientStateChangedEvent): Rx.Observable<T> {
+export abstract class AbstractProcessor<TContext extends BaseContext> {
+  @Inject(EventService)
+  protected eventService: EventService;
+
+  abstract pipe(source: Rx.Observable<TContext>): Rx.Observable<TContext>;
+
+  protected getMilestoneConfig(): MilestoneConfig<TContext> | undefined {
+    return undefined;
+  }
+
+  protected validateEvent(
+    event: ClientStateChangedEvent,
+  ): Rx.Observable<TContext> {
     const clientId = validate(event.clientId, 'string');
 
     const selectedCurrency = validate(
@@ -38,7 +53,7 @@ export abstract class AbstractProcessor<T extends BaseContext> {
     const chainIds = chains.map((it) => it.id);
 
     return Rx.from([
-      <T>{
+      <TContext>{
         chainIds,
         chains,
         clientId,
@@ -68,7 +83,66 @@ export abstract class AbstractProcessor<T extends BaseContext> {
     );
   }
 
-  abstract pipe(source: Rx.Observable<T>): Rx.Observable<T>;
+  protected removeMilestones() {
+    return Rx.tap((context: TContext) => {
+      const config = this.getMilestoneConfig();
+
+      if (!config) {
+        return;
+      }
+
+      const removeMilestonesQuery = {
+        id: config.collectionName,
+      };
+
+      this.eventService.removeLayers(context.clientId, removeMilestonesQuery);
+    });
+  }
+
+  protected emitMilestones() {
+    return Rx.tap((context: TContext) => {
+      const config = this.getMilestoneConfig();
+
+      if (!config) {
+        return;
+      }
+
+      const layers = this.getMilestoneLayers(context, config);
+
+      this.eventService.addLayers(context.clientId, layers);
+    });
+  }
+
+  private getMilestoneLayers(
+    context: TContext,
+    config: MilestoneConfig<TContext>,
+  ) {
+    const documents: MilestoneDocumentDto[] = config.wrappers.map(
+      (wrapper: MilestoneDocumentWrapper<TContext>, i: number) => {
+        const targetDocuments = wrapper.items(context);
+
+        const milestoneDocument: MilestoneDocumentDto = {
+          id: `${i}`,
+          status: !targetDocuments ? 'progressing' : 'complete',
+          label: !targetDocuments
+            ? wrapper.progressing(context)
+            : wrapper.complete(targetDocuments),
+        };
+
+        return milestoneDocument;
+      },
+    );
+
+    const layers: LayerDto[] = [
+      {
+        id: config.collectionName,
+        collectionName: config.collectionName,
+        set: documents,
+      },
+    ];
+
+    return layers;
+  }
 }
 
 export interface BaseContext {
@@ -78,4 +152,28 @@ export interface BaseContext {
   readonly selectedCurrency: CurrencyDto;
   readonly watchedAddresses: string[];
   readonly forms?: Record<string, any>;
+}
+
+export interface MilestoneDocumentWrapper<TContext extends BaseContext> {
+  items: (context: TContext) => any;
+  progressing: (context: TContext) => string;
+  complete: (documents: any) => string;
+}
+
+export interface MilestoneConfig<TContext extends BaseContext> {
+  readonly collectionName: string;
+  readonly showEmptyWhen: (context: TContext) => boolean;
+  readonly wrappers: MilestoneDocumentWrapper<TContext>[];
+}
+
+export function milestoneConfig<TContext extends BaseContext>(
+  collectionName: string,
+  showEmptyWhen: (context: TContext) => boolean,
+  ...wrappers: MilestoneDocumentWrapper<TContext>[]
+): MilestoneConfig<TContext> {
+  return {
+    collectionName,
+    showEmptyWhen,
+    wrappers,
+  };
 }
