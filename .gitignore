@@ -83,5 +83,3 @@ clear-values.yaml
 # Nest.js
 dist
 .env
-
-yarn.lock

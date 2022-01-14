@@ -1,17 +1,26 @@
 {
-  "name": "ek-sdk",
+  "name": "@ekp/sdk-nestjs",
   "version": "0.1.0",
   "description": "The Nest.js software development kit for EarnKeeper.io plugins",
-  "homepage": "https://github.com/EarnKeeper/ek-sdk#readme",
+  "homepage": "https://github.com/earnkeeper/ekp-sdk-nestjs#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/EarnKeeper/ek-sdk.git"
+    "url": "git+https://github.com/earnkeeper/ekp-sdk-nestjs.git"
   },
   "author": "Gavin Shaw",
   "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=16.8"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
+    "prepublish": "npm run build",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
   },
@@ -81,6 +90,6 @@
     "typescript": "^4.3.5"
   },
   "bugs": {
-    "url": "https://github.com/EarnKeeper/ek-sdk/issues"
+    "url": "https://github.com/earnkeeper/ekp-sdk-nestjs/issues"
   }
 }
