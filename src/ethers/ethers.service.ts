@@ -3,7 +3,6 @@ import retry from 'async-retry';
 import { validate } from 'bycontract';
 import { Cache } from 'cache-manager';
 import { ethers } from 'ethers';
-import _ from 'lodash';
 import { LimiterService } from '../limiter.service';
 import { logger, safeBigNumberFrom } from '../util';
 import { EthersTransaction } from './ethers-transaction';
@@ -20,19 +19,25 @@ export class EthersService {
       provider: new ethers.providers.JsonRpcProvider(
         'https://bsc-dataseed.binance.org',
       ),
-      limiter: this.limiterService.createLimiter('bsc-provider', 10),
+      limiter: this.limiterService.createLimiter('bsc-provider', {
+        minTime: 100,
+      }),
     },
     eth: {
       provider: new ethers.providers.JsonRpcProvider(
         'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
       ),
-      limiter: this.limiterService.createLimiter('eth-provider', 30),
+      limiter: this.limiterService.createLimiter('eth-provider', {
+        minTime: 50,
+      }),
     },
     polygon: {
       provider: new ethers.providers.JsonRpcProvider(
         'https://rpc-mainnet.maticvigil.com/',
       ),
-      limiter: this.limiterService.createLimiter('polygon-provider', 10),
+      limiter: this.limiterService.createLimiter('polygon-provider', {
+        minTime: 100,
+      }),
     },
   };
 
