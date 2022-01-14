@@ -1,5 +1,5 @@
 {
-  "name": "@ekp/sdk-nestjs",
+  "name": "@earnkeeper/ekp-sdk-nestjs",
   "version": "0.1.0",
   "description": "The Nest.js software development kit for EarnKeeper.io plugins",
   "homepage": "https://github.com/earnkeeper/ekp-sdk-nestjs#readme",
