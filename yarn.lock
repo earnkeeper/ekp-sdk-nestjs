@@ -387,6 +387,11 @@
     "enabled" "2.0.x"
     "kuler" "^2.0.0"
 
+"@earnkeeper/ekp-ui@^0.1.1":
+  "integrity" "sha512-0oYeBPmGP6VgT8/TE/pN0YC2a9e1yFyGDPLbVHmn0cn/mVE/kD9LhVj4benHLKzoF7ltoLK+cB9lFt+DSq4egQ=="
+  "resolved" "https://registry.npmjs.org/@earnkeeper/ekp-ui/-/ekp-ui-0.1.1.tgz"
+  "version" "0.1.1"
+
 "@eslint/eslintrc@^0.4.3":
   "integrity" "sha512-J6KFFz5QCYUJq3pf0mjEcCJVERbzv71PUIDczuh9JkwGEzced6CO5ADLHB1rbf/+oPBtoPfMYNOpGDzCANlbXw=="
   "resolved" "https://registry.npmjs.org/@eslint/eslintrc/-/eslintrc-0.4.3.tgz"

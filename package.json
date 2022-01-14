@@ -20,11 +20,10 @@
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
-    "prepublish": "npm run build",
-    "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
+    "prepublish": "npm run build"
   },
   "dependencies": {
+    "@earnkeeper/ekp-ui": "^0.1.1",
     "@jsonforms/core": "^2.5.2",
     "@nestjs/bull": "^0.4.2",
     "@nestjs/common": "^8.0.0",
