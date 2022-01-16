@@ -34,11 +34,13 @@ export class MoralisService {
   }
 
   async onModuleInit() {
-    await Moralis.start({
-      serverUrl: this.configService.moralisServerUrl,
-      appId: this.configService.moralisAppId,
-    });
-    logger.log('Moralis service initialized');
+    if (!!this.configService.moralisServerUrl && !!this.configService.moralisAppId) {
+      await Moralis.start({
+        serverUrl: this.configService.moralisServerUrl,
+        appId: this.configService.moralisAppId,
+      });
+      logger.log('Moralis service initialized');
+    }
   }
 
   private limiter: Bottleneck;

@@ -28,8 +28,8 @@ export class EkConfigService
   constructor(private configService: ConfigService) {
     this.pluginId = this.required('EKP_PLUGIN_ID');
     this.pluginName = this.required('EKP_PLUGIN_NAME');
-    this.moralisServerUrl = this.required('MORALIS_SERVER_URL');
-    this.moralisAppId = this.required('MORALIS_APP_ID');
+    this.moralisServerUrl = this.optional('MORALIS_SERVER_URL');
+    this.moralisAppId = this.optional('MORALIS_APP_ID');
     // this.moralisApiKey = this.required('MORALIS_API_KEY');
     this.mongoHost = this.optional('MONGO_HOST');
     this.redisHost = this.optional('REDIS_HOST');
