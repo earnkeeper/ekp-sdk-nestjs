@@ -76,7 +76,7 @@ export class OpenseaService {
 
               return result.data;
             } catch (error) {
-              if (error.response.status === 404) {
+              if (error.response?.status === 404) {
                 return null;
               }
               throw error;
