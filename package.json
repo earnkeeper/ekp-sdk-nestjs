@@ -27,9 +27,9 @@
     "@earnkeeper/ekp-ui": "^0.1.1",
     "@jsonforms/core": "^2.5.2",
     "@nestjs/bull": "^0.4.2",
-    "@nestjs/common": "^8.0.0",
-    "@nestjs/config": "^1.1.5",
-    "@nestjs/core": "^8.0.0",
+    "@nestjs/common": "^8.2.5",
+    "@nestjs/config": "^1.1.6",
+    "@nestjs/core": "^8.2.5",
     "@nestjs/event-emitter": "^1.0.0",
     "@nestjs/microservices": "^8.2.4",
     "@nestjs/mongoose": "^9.0.1",
@@ -53,7 +53,7 @@
     "mongoose": "^6.1.2",
     "moralis": "0.0.184",
     "morphism": "^1.12.3",
-    "nestjs-redis": "git+https://github.com/skunight/nestjs-redis.git#master",
+    "nestjs-redis": "git+https://github.com/earnkeeper/nestjs-redis#f699937",
     "pg": "^8.7.1",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
@@ -88,6 +88,10 @@
     "ts-node": "^10.0.0",
     "tsconfig-paths": "^3.10.1",
     "typescript": "^4.3.5"
+  },
+  "resolutions": {
+    "axios": "0.24.0",
+    "uuid": "^7"
   },
   "bugs": {
     "url": "https://github.com/earnkeeper/ekp-sdk-nestjs/issues"
