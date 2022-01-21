@@ -17,13 +17,23 @@ describe('OpenseaService', () => {
     await app.init();
   });
 
-  test(`works with an opensea proxy`, async () => {
-    const asset = await openseaService.assetOf(
+  test(`assetOf does not throw`, async () => {
+    await openseaService.assetOf(
       '0x47f75e8dd28df8d6e7c39ccda47026b0dca99043',
       '731',
     );
+  });
 
-    console.log(asset);
+  jest.setTimeout(10000);
+
+  test(`eventsOf does not throw`, async () => {
+    const events = await openseaService.eventsOf(
+      '0x47f75e8dd28df8d6e7c39ccda47026b0dca99043',
+      0,
+      300,
+    );
+
+    expect(events).toHaveLength(300);
   });
 
   afterAll(async () => {

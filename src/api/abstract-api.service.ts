@@ -20,7 +20,7 @@ export interface CallWrapperOptions {
 }
 
 export class AbstractApiService {
-  limiter: Bottleneck;
+  protected limiter: Bottleneck;
   @Inject(CACHE_MANAGER)
   private cache: Cache;
   @Inject()
