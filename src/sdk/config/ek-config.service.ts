@@ -15,9 +15,6 @@ import {
 import * as redisStore from 'cache-manager-redis-store';
 import { RedisModuleAsyncOptions } from 'nestjs-redis';
 
-export const PUBLISH_CLIENT = 'PUBLISH_CLIENT';
-export const SUBSCRIBE_CLIENT = 'SUBSCRIBER_CLIENT';
-
 @Injectable()
 export class EkConfigService
   implements
@@ -60,12 +57,12 @@ export class EkConfigService
       useFactory: (configService: EkConfigService) => {
         return [
           {
-            name: PUBLISH_CLIENT,
+            name: 'PUBLISH_CLIENT',
             host: configService.redisHost,
             port: configService.redisPort,
           },
           {
-            name: SUBSCRIBE_CLIENT,
+            name: 'SUBSCRIBE_CLIENT',
             host: configService.redisHost,
             port: configService.redisPort,
           },
@@ -86,7 +83,7 @@ export class EkConfigService
 
   createMongooseOptions(): MongooseModuleOptions {
     return {
-      uri: `mongodb://${this.mongoHost}:${this.mongoPort}/ekp`,
+      uri: `mongodb://${this.mongoHost}:${this.mongoPort}/ekp-${this.pluginId}`,
     };
   }
 

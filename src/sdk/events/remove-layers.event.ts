@@ -1,8 +1,8 @@
 import { LayerQueryDto } from '../dtos/layer-query.dto';
 
-export const ADD_LAYERS = 'add-layers';
+export const REMOVE_LAYERS = 'remove-layers';
 
 export interface RemoveLayersEvent {
-  readonly channelId: string;
+  readonly clientId: string;
   readonly query: LayerQueryDto;
 }

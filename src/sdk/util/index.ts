@@ -1,4 +1,3 @@
-export * from './abstract.processor';
 export * from './ChainId';
 export * from './ChainMetadata';
 export * from './chains';

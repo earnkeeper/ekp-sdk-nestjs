@@ -1,15 +1,17 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { GlobalModule } from '../src/global.module';
-import { OpenseaService } from '../src/opensea/opensea.service';
+import { OpenseaService } from '../../../src/sdk/opensea/opensea.service';
+import { SdkModule } from '../../../src/sdk/sdk.module';
 
-describe('OpenseaService', () => {
+describe(OpenseaService.name, () => {
+  jest.setTimeout(10000);
+
   let app: INestApplication;
   let openseaService: OpenseaService;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [GlobalModule],
+      imports: [SdkModule],
     }).compile();
 
     app = moduleRef.createNestApplication();
@@ -23,8 +25,6 @@ describe('OpenseaService', () => {
       '731',
     );
   });
-
-  jest.setTimeout(10000);
 
   test(`eventsOf does not throw`, async () => {
     const events = await openseaService.eventsOf(
