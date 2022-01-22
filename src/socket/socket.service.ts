@@ -15,6 +15,7 @@ import { LayerDto } from '../sdk/dtos';
 import {
   AddLayersEvent,
   ADD_LAYERS,
+  ClientStateChangedEvent,
   CLIENT_CONNECTED,
   CLIENT_DISCONNECTED,
   CLIENT_STATE_CHANGED,
@@ -67,10 +68,14 @@ export class SocketService {
   handleClientStateChangedMessage(client: Socket, payload: any) {
     logger.log(`Received CLIENT_STATE_CHANGED: ${client.id}`);
 
-    this.clientEventQueue.add(CLIENT_STATE_CHANGED, {
+    this.queueClientStateChangedEvent({
       clientId: client.id,
       ...JSON.parse(payload),
     });
+  }
+
+  async queueClientStateChangedEvent(event: ClientStateChangedEvent) {
+    await this.clientEventQueue.add(CLIENT_STATE_CHANGED, event);
   }
 
   emitAddLayers(addLayersEvent: AddLayersEvent) {
