@@ -14,9 +14,10 @@ import {
   CLIENT_STATE_CHANGED,
   REMOVE_LAYERS,
 } from '../events';
+import { CLIENT_EVENT_QUEUE } from '../util';
 import { ClientState, ClientStateDocument } from './schemas';
 
-@Processor('CLIENT_EVENT_QUEUE')
+@Processor(CLIENT_EVENT_QUEUE)
 export class ClientService {
   private readonly publishClient: Redis;
 

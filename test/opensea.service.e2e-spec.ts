@@ -1,7 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { OpenseaService } from '../../../src/sdk/opensea/opensea.service';
-import { SdkModule } from '../../../src/sdk/sdk.module';
+import { OpenseaService, SdkModule } from '../src';
 
 describe(OpenseaService.name, () => {
   jest.setTimeout(10000);

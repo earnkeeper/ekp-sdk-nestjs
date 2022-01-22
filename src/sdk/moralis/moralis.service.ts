@@ -8,7 +8,7 @@ import Moralis from 'moralis/node';
 import { EkConfigService } from '../config/ek-config.service';
 import { LimiterService } from '../limiter.service';
 import { ChainId, chains, logger } from '../util';
-import { TokenMetadata } from '../util/TokenMetadata';
+import { TokenMetadata } from '../util/chain/models/TokenMetadata';
 import {
   ChainList,
   ERC20Price,

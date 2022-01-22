@@ -1,5 +1,4 @@
 import { InjectQueue } from '@nestjs/bull';
-import { Inject } from '@nestjs/common';
 import {
   SubscribeMessage,
   WebSocketGateway,
@@ -23,16 +22,16 @@ import {
   REMOVE_LAYERS,
   UPDATE_METADATA,
 } from '../sdk/events';
-import { logger } from '../sdk/util/default-logger';
+import { CLIENT_EVENT_QUEUE, logger } from '../sdk/util';
 
 @WebSocketGateway({ cors: true })
 export class SocketService {
   private subscribeClient: Redis;
 
   constructor(
-    @InjectQueue('CLIENT_EVENT_QUEUE') private clientEventQueue: Queue,
-    @Inject() private configService: EkConfigService,
-    @Inject() private redisService: RedisService,
+    @InjectQueue(CLIENT_EVENT_QUEUE) private clientEventQueue: Queue,
+    private configService: EkConfigService,
+    redisService: RedisService,
   ) {
     this.subscribeToEmits(redisService);
   }

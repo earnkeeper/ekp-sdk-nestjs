@@ -1,5 +1,5 @@
 import { components } from 'moralis/types/generated/web3Api';
-import { ChainId } from '../util/ChainId';
+import { ChainId } from '../util/chain/ChainId';
 
 export type ChainList = components['schemas']['chainList'];
 export type ERC20Price = components['schemas']['erc20Price'] & {

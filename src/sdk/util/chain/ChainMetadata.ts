@@ -1,5 +1,5 @@
 import { ChainId } from './ChainId';
-import { TokenMetadata } from './TokenMetadata';
+import { TokenMetadata } from './models/TokenMetadata';
 
 export interface ChainMetadata {
   readonly id: ChainId;
