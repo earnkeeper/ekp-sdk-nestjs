@@ -44,13 +44,20 @@ export class OpenseaService extends AbstractApiService {
 
   eventsOf(
     tokenAddress: string,
+    eventType?: string,
     offset?: number,
     limit?: number,
   ): Promise<AssetEvent[]> {
-    validate([tokenAddress, offset, limit], ['string', 'number=', 'number=']);
+    validate(
+      [tokenAddress, eventType, offset, limit],
+      ['string', 'string=', 'number=', 'number='],
+    );
 
-    //     --url 'https://api.opensea.io/api/v1/events?asset_contract_address=0x47f75e8dd28df8d6e7c39ccda47026b0dca99043&only_opensea=false&offset=0&limit=20' \
     let url = `${BASE_URL}/events?asset_contract_address=${tokenAddress}&only_opensea=false`;
+
+    if (eventType !== undefined) {
+      url += `&event_type=${eventType}`;
+    }
 
     if (offset !== undefined) {
       url += `&offset=${offset}`;
