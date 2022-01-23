@@ -47,6 +47,8 @@ describe(OpenseaService.name, () => {
 
     expect(events).toHaveLength(300);
 
+    console.log(events.map((it) => _.omit(it, ['asset']))[0]);
+
     const distinctEventTypes = _.chain(events)
       .map((it) => it.event_type)
       .uniq()

@@ -5,11 +5,11 @@ import * as os from 'os';
 export async function runCluster(socketApp: any, workerApp: any) {
   const bootstrap = async () => {
     if (cluster.default.isPrimary) {
-      const app = await NestFactory.create(socketApp, { logger: false });
+      const app = await NestFactory.create(socketApp);
 
       await app.listen(3001);
     } else {
-      const app = await NestFactory.create(workerApp, { logger: false });
+      const app = await NestFactory.create(workerApp);
 
       await app.init();
     }

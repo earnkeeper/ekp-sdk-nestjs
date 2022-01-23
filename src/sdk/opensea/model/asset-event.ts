@@ -1,19 +1,8 @@
-// TODO: add more fields here
-export interface AssetContract {
-  readonly image_url: string;
-  readonly slug: string;
-}
+import { Asset } from './Asset';
 
 // TODO: add more fields here
 export interface AssetEvent {
-  readonly asset: {
-    readonly id: number;
-    readonly token_id: string;
-    readonly image_url: string;
-    readonly name: string;
-    readonly permalink: string;
-    readonly token_metadata: string;
-  };
+  readonly asset: Asset;
   readonly contract_address: string;
   readonly created_date: string;
   readonly duration: string;
