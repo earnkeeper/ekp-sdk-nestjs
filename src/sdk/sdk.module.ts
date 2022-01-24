@@ -9,7 +9,7 @@ import { EkConfigService } from './config/ek-config.service';
 import { EthersService } from './ethers/ethers.service';
 import { LimiterService } from './limiter.service';
 import { MoralisService } from './moralis/moralis.service';
-import { OpenseaService } from './opensea/opensea.service';
+import { OpenseaService, OPENSEA_QUEUE } from './opensea/opensea.service';
 
 @Global()
 @Module({
@@ -19,6 +19,7 @@ import { OpenseaService } from './opensea/opensea.service';
     BullModule.forRootAsync({ useClass: EkConfigService }),
     MongooseModule.forRootAsync({ useClass: EkConfigService }),
     RedisModule.forRootAsync(EkConfigService.createRedisAsyncOptions()),
+    BullModule.registerQueue({ name: OPENSEA_QUEUE }),
     ClientModule,
   ],
   providers: [
@@ -31,8 +32,8 @@ import { OpenseaService } from './opensea/opensea.service';
   ],
   exports: [
     ClientModule,
-    CoingeckoService,
     EkConfigModule,
+    CoingeckoService,
     EthersService,
     LimiterService,
     MoralisService,

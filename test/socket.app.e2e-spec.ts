@@ -44,6 +44,7 @@ describe(SocketApp.name, () => {
     });
 
     count = await clientEventQueue.count();
+
     expect(count).toEqual(1);
   });
 
