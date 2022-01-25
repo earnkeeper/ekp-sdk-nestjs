@@ -10,14 +10,12 @@ import { Model } from 'mongoose';
 import * as Rx from 'rxjs';
 import {
   concatMap,
-  firstValueFrom,
   from,
   lastValueFrom,
-  map,
   mergeMap,
+  Observable,
   takeWhile,
   tap,
-  toArray,
 } from 'rxjs';
 import { AbstractApiService } from '../api/abstract-api.service';
 import { AssetContractDto, AssetEventDto } from './dto';
@@ -37,7 +35,11 @@ export class OpenseaService extends AbstractApiService {
 
   private eventCursors: Record<string, number> = {};
 
-  private events$ = new Rx.Subject<AssetEventDto>();
+  private assetEventsSubject = new Rx.Subject<AssetEventDto>();
+
+  get assetEvents$() {
+    return this.assetEventsSubject as Observable<AssetEventDto>;
+  }
 
   constructor(
     @InjectQueue(OPENSEA_QUEUE) private queue: Queue,
@@ -106,7 +108,7 @@ export class OpenseaService extends AbstractApiService {
           return eventDtos;
         }),
         mergeMap((newEvents) => newEvents),
-        tap((event) => this.events$.next(event)),
+        tap((event) => this.assetEventsSubject.next(event)),
       ),
     );
 
@@ -125,7 +127,7 @@ export class OpenseaService extends AbstractApiService {
         .max()
         .value();
 
-      this.events$.next(events);
+      this.assetEventsSubject.next(events);
     }
   }
 
