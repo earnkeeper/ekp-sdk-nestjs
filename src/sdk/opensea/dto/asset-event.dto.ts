@@ -1,8 +1,8 @@
-import { Asset } from './Asset';
+import { AssetDto } from './asset.dto';
 
 // TODO: add more fields here
-export interface AssetEvent {
-  readonly asset: Asset;
+export interface AssetEventDto {
+  readonly asset: AssetDto;
   readonly contract_address: string;
   readonly created_date: string;
   readonly duration: string;

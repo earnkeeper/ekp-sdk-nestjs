@@ -2,11 +2,9 @@ import { CACHE_MANAGER, Inject } from '@nestjs/common';
 import retry from 'async-retry';
 import Bottleneck from 'bottleneck';
 import { Cache } from 'cache-manager';
-import { logger } from '../util/default-logger';
 import { EkConfigService } from '../config/ek-config.service';
 import { LimiterService } from '../limiter.service';
-import { AxiosError } from 'axios';
-import _ from 'lodash';
+import { logger } from '../util/default-logger';
 
 export interface AbstractApiOptions {
   readonly name: string;
@@ -22,7 +20,7 @@ export interface CallWrapperOptions {
 export class AbstractApiService {
   protected limiter: Bottleneck;
   @Inject(CACHE_MANAGER)
-  private cache: Cache;
+  protected cache: Cache;
   @Inject()
   protected limiterService: LimiterService;
   @Inject()
@@ -87,7 +85,7 @@ export class AbstractApiService {
         console.error({
           request: error.request._header,
           response: {
-            data: error.response?.data,
+            data: JSON.stringify(error.response?.data),
             headers: error.response?.headers,
             status: error.response?.status,
             statusText: error.response?.statusText,

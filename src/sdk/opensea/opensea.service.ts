@@ -1,13 +1,27 @@
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import { Job, Queue } from 'bull';
 import { validate } from 'bycontract';
 import _ from 'lodash';
 import moment from 'moment';
+import { Model } from 'mongoose';
 import * as Rx from 'rxjs';
+import {
+  concatMap,
+  firstValueFrom,
+  from,
+  lastValueFrom,
+  map,
+  mergeMap,
+  takeWhile,
+  tap,
+  toArray,
+} from 'rxjs';
 import { AbstractApiService } from '../api/abstract-api.service';
-import { AssetContract, AssetEvent } from './model';
+import { AssetContractDto, AssetEventDto } from './dto';
+import { AssetEvent } from './schema';
 
 const BASE_URL = 'https://api.opensea.io/api/v1';
 
@@ -23,43 +37,82 @@ export class OpenseaService extends AbstractApiService {
 
   private eventCursors: Record<string, number> = {};
 
-  private events$ = new Rx.Subject<{
-    contractAddress: string;
-    events: AssetEvent[];
-  }>();
+  private events$ = new Rx.Subject<AssetEventDto>();
 
-  constructor(@InjectQueue(OPENSEA_QUEUE) private queue: Queue) {
+  constructor(
+    @InjectQueue(OPENSEA_QUEUE) private queue: Queue,
+    @InjectModel(AssetEvent.name)
+    public assetEventModel: Model<AssetEvent>,
+  ) {
     super({
       name: 'OpenseaService',
       limit: 2,
     });
   }
 
-  pollEvents$(contractAddress: string): Rx.Observable<AssetEvent[]> {
-    this.queue.add(
+  async syncAssetEvents(tokenAddress: string): Promise<Job<any>> {
+    return this.queue.add(
       EVENTS_JOB,
-      { contractAddress, started: moment().unix() },
+      { tokenAddress, startAt: moment().subtract(1, 'day').unix() },
       {
         repeat: { every: 30000 },
-        jobId: `opensea-events-${contractAddress}`,
+        jobId: `opensea-events-${tokenAddress}`,
       },
-    );
-
-    return this.events$.pipe(
-      Rx.filter((it) => it.contractAddress === contractAddress),
-      Rx.map((it) => it.events),
     );
   }
 
   @Process(EVENTS_JOB)
-  async processEventsJob(job: Job<any>) {
-    const { contractAddress, started } = job.data;
+  async processEventsJob(job: Partial<Job<any>>) {
+    const { tokenAddress, startAt } = job.data;
 
-    const occuredAfter = this.eventCursors[contractAddress] ?? started;
+    const occuredAfter = this.eventCursors[tokenAddress] ?? startAt;
 
-    const url = `${BASE_URL}/events?asset_contract_address=${contractAddress}&only_opensea=false&limit=300&occurred_after=${occuredAfter}`;
+    const maxPages = 100;
+    const pageSize = 100;
 
-    const events = await this.get<AssetEvent[]>(
+    await lastValueFrom(
+      from(_.range(maxPages)).pipe(
+        concatMap(async (page) => {
+          const newEvents = await this.fetchEvents(
+            tokenAddress,
+            occuredAfter,
+            pageSize,
+            page * pageSize,
+          );
+
+          return newEvents;
+        }),
+        takeWhile((events) => events.length > 0),
+        mergeMap(async (eventDtos) => {
+          await this.assetEventModel.bulkWrite(
+            eventDtos.map((eventDto) => {
+              const event: AssetEvent = {
+                id: eventDto.id,
+                contractAddress: tokenAddress,
+                createdDate: moment(`${eventDto.created_date}Z`).unix(),
+                eventType: eventDto.event_type,
+                event: eventDto,
+              };
+
+              return {
+                updateOne: {
+                  filter: { id: event.id },
+                  update: { $set: event },
+                  upsert: true,
+                },
+              };
+            }),
+          );
+          return eventDtos;
+        }),
+        mergeMap((newEvents) => newEvents),
+        tap((event) => this.events$.next(event)),
+      ),
+    );
+
+    const url = `${BASE_URL}/events?asset_contract_address=${tokenAddress}&only_opensea=false&limit=300&occurred_after=${occuredAfter}`;
+
+    const events = await this.get<AssetEventDto[]>(
       url,
       undefined,
       undefined,
@@ -67,7 +120,7 @@ export class OpenseaService extends AbstractApiService {
     );
 
     if (events?.length > 0) {
-      this.eventCursors[contractAddress] = _.chain(events)
+      this.eventCursors[tokenAddress] = _.chain(events)
         .map((event) => event.created_date ?? event.listing_time)
         .max()
         .value();
@@ -76,7 +129,7 @@ export class OpenseaService extends AbstractApiService {
     }
   }
 
-  metadataOf(contractAddress: string): Promise<AssetContract> {
+  metadataOf(contractAddress: string): Promise<AssetContractDto> {
     validate([contractAddress], ['string']);
 
     const url = `${BASE_URL}/asset_contract/${contractAddress}`;
@@ -99,30 +152,40 @@ export class OpenseaService extends AbstractApiService {
     return this.get(url, cacheKey, 30, (response) => response?.data);
   }
 
-  eventsOf(
+  async eventsOf(
     tokenAddress: string,
     occurredAfter: number,
-    eventType?: string,
-  ): Promise<AssetEvent[]> {
-    validate(
-      [tokenAddress, eventType, occurredAfter],
-      ['string', 'string=', 'number='],
-    );
+    eventTypes?: string[],
+  ): Promise<AssetEventDto[]> {
+    const query: any = {
+      contractAddress: tokenAddress,
+      createdDate: {
+        $gte: occurredAfter,
+      },
+    };
 
-    let url = `${BASE_URL}/events?asset_contract_address=${tokenAddress}&only_opensea=false&limit=300`;
-
-    if (eventType !== undefined) {
-      url += `&event_type=${eventType}`;
+    if (!!eventTypes) {
+      query.eventType = {
+        $in: eventTypes,
+      };
     }
 
-    const cacheKey = `${url}_v1`;
+    const events = await this.assetEventModel.find(query).exec();
 
-    return this.get(
-      url,
-      cacheKey,
-      30,
-      (response) => response?.data?.asset_events ?? [],
-    );
+    return events.map((event) => event.event);
+  }
+
+  fetchEvents(
+    tokenAddress: string,
+    occurredAfter: number,
+    limit: number,
+    offset: number,
+  ): Promise<AssetEventDto[]> {
+    const url = `${BASE_URL}/events?asset_contract_address=${tokenAddress}&only_opensea=false&limit=${limit}&offset=${offset}&occurred_after=${occurredAfter}`;
+
+    return this.get(url, undefined, undefined, (response) => {
+      return response?.data?.asset_events ?? [];
+    });
   }
 
   private get<T>(

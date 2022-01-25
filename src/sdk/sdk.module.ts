@@ -10,7 +10,7 @@ import { EthersService } from './ethers/ethers.service';
 import { LimiterService } from './limiter.service';
 import { MoralisService } from './moralis/moralis.service';
 import { OpenseaService, OPENSEA_QUEUE } from './opensea/opensea.service';
-
+import { AssetEvent, AssetEventSchema } from './opensea/schema';
 @Global()
 @Module({
   imports: [
@@ -18,6 +18,9 @@ import { OpenseaService, OPENSEA_QUEUE } from './opensea/opensea.service';
     CacheModule.registerAsync({ useClass: EkConfigService }),
     BullModule.forRootAsync({ useClass: EkConfigService }),
     MongooseModule.forRootAsync({ useClass: EkConfigService }),
+    MongooseModule.forFeature([
+      { name: AssetEvent.name, schema: AssetEventSchema },
+    ]),
     RedisModule.forRootAsync(EkConfigService.createRedisAsyncOptions()),
     BullModule.registerQueue({ name: OPENSEA_QUEUE }),
     ClientModule,

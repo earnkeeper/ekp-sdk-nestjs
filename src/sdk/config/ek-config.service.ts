@@ -33,6 +33,10 @@ export class EkConfigService
     this.redisPort = this.optional('REDIS_PORT', 6379);
     this.mongoUser = this.optional('MONGO_USER', undefined);
     this.mongoPassword = this.optional('MONGO_PASSWORD', undefined);
+    this.mongoDatabaseName = this.optional(
+      'MONGO_DB_NAME',
+      `ekp-${this.pluginId}`,
+    );
     this.redisUser = this.optional('REDIS_USER', undefined);
     this.redisPassword = this.optional('REDIS_PASSWORD', undefined);
     this.openseaApiKey = this.optional('OPENSEA_API_KEY', undefined);
@@ -46,6 +50,7 @@ export class EkConfigService
   readonly mongoPort: number;
   readonly mongoUser: string;
   readonly mongoPassword: string;
+  readonly mongoDatabaseName: string;
   readonly redisHost: string;
   readonly redisPort: number;
   readonly redisUser: string;
@@ -83,7 +88,7 @@ export class EkConfigService
 
   createMongooseOptions(): MongooseModuleOptions {
     return {
-      uri: `mongodb://${this.mongoHost}:${this.mongoPort}/ekp-${this.pluginId}`,
+      uri: `mongodb://${this.mongoHost}:${this.mongoPort}/${this.mongoDatabaseName}`,
     };
   }
 

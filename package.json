@@ -1,6 +1,6 @@
 {
   "name": "@earnkeeper/ekp-sdk-nestjs",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "The Nest.js software development kit for EarnKeeper.io plugins",
   "homepage": "https://github.com/earnkeeper/ekp-sdk-nestjs#readme",
   "repository": {

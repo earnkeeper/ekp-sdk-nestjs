@@ -1,14 +1,20 @@
+import { getQueueToken } from '@nestjs/bull';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { Queue } from 'bull';
 import _ from 'lodash';
 import moment from 'moment';
 import { OpenseaService, SdkModule } from '../src';
+import { OPENSEA_QUEUE } from '../src/sdk/opensea/opensea.service';
+
+const CONTRACT_ADDRESS = '0x47f75e8dd28df8d6e7c39ccda47026b0dca99043';
 
 describe(OpenseaService.name, () => {
-  jest.setTimeout(10000);
+  jest.setTimeout(30000);
 
   let app: INestApplication;
   let openseaService: OpenseaService;
+  let openseaQueue: Queue;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -16,42 +22,39 @@ describe(OpenseaService.name, () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
+    openseaQueue = app.get(getQueueToken(OPENSEA_QUEUE));
     openseaService = moduleRef.get(OpenseaService);
     await app.init();
   });
 
   test(`assetOf does not throw`, async () => {
-    await openseaService.assetOf(
-      '0x47f75e8dd28df8d6e7c39ccda47026b0dca99043',
-      '731',
-    );
+    await openseaService.assetOf(CONTRACT_ADDRESS, '731');
   });
 
-  test(`eventsOf does not throw`, async () => {
-    const events = await openseaService.eventsOf(
-      '0x47f75e8dd28df8d6e7c39ccda47026b0dca99043',
-      moment().subtract(24, 'hours').unix(),
-    );
+  test(`sync events populates the database`, async () => {
+    await openseaService.assetEventModel.remove({
+      id: {
+        $gte: 0,
+      },
+    });
+    const startAt = moment().subtract(1, 'hour').unix();
 
-    expect(events).toHaveLength(300);
-  });
+    const events1 = await openseaService.eventsOf(CONTRACT_ADDRESS, startAt);
+    expect(events1).toHaveLength(0);
 
-  test(`created event_type filters events`, async () => {
-    const events = await openseaService.eventsOf(
-      '0x47f75e8dd28df8d6e7c39ccda47026b0dca99043',
-      moment().subtract(24, 'hours').unix(),
+    await openseaService.processEventsJob({
+      data: { tokenAddress: CONTRACT_ADDRESS, startAt: startAt },
+    });
+
+    const events2 = await openseaService.eventsOf(CONTRACT_ADDRESS, startAt, [
       'created',
-    );
+    ]);
 
-    expect(events).toHaveLength(300);
+    expect(events2.length).toBeGreaterThan(0);
 
-    const distinctEventTypes = _.chain(events)
-      .map((it) => it.event_type)
-      .uniq()
-      .value();
-
-    expect(distinctEventTypes).toHaveLength(1);
-    expect(distinctEventTypes[0]).toEqual('created');
+    expect(
+      _.every(events2, (event) => event.event_type === 'created'),
+    ).toBeTruthy();
   });
 
   afterAll(async () => {

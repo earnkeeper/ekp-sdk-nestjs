@@ -1,2 +1,2 @@
-export * as opensea from './model';
+export * from './dto';
 export * from './opensea.service';

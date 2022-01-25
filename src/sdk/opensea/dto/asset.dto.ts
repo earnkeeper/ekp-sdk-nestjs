@@ -1,4 +1,4 @@
-export interface Asset {
+export interface AssetDto {
   readonly id: number;
   readonly token_id: string;
   readonly image_url: string;

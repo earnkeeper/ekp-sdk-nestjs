@@ -1,12 +1,10 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import retry from 'async-retry';
 import axios from 'axios';
-import Bottleneck from 'bottleneck';
 import { validate } from 'bycontract';
-import { Cache } from 'cache-manager';
 import _ from 'lodash';
 import moment from 'moment';
-import { LimiterService } from '../limiter.service';
+import { AbstractApiService } from '../api/abstract-api.service';
 import { ChainId, chains, logger } from '../util';
 import { CoinPrice } from './model/coin-price';
 const BASE_URL = 'https://api.coingecko.com/api/v3';
@@ -18,21 +16,19 @@ interface GeckoCoin {
 }
 
 @Injectable()
-export class CoingeckoService {
-  constructor(
-    @Inject(CACHE_MANAGER) private cache: Cache,
-    limiterService: LimiterService,
-  ) {
-    this.limiter = limiterService.createLimiter('coingecko-limiter', {
-      minTime: 250,
-      maxConcurrent: 25,
-      reservoir: 50,
-      reservoirRefreshAmount: 50,
-      reservoirRefreshInterval: 60000,
+export class CoingeckoService extends AbstractApiService {
+  constructor() {
+    super({
+      name: 'CoingeckoService',
+      limit: {
+        minTime: 250,
+        maxConcurrent: 25,
+        reservoir: 50,
+        reservoirRefreshAmount: 50,
+        reservoirRefreshInterval: 60000,
+      },
     });
   }
-
-  limiter: Bottleneck;
 
   private platforms = {
     eth: 'ethereum',
@@ -52,37 +48,31 @@ export class CoingeckoService {
   async getImageUrl(coinId: string): Promise<string> {
     validate([coinId], ['string']);
     const url = `${BASE_URL}/coins/${coinId}`;
-    const cacheKey = `coingecko.imageUrl['${coinId}']`;
+    const cacheKey = `${url}_v1`;
 
-    return this.cache.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            try {
-              logger.debug('GET ' + url);
+    return this.wrapCall(
+      async () => {
+        try {
+          const response = await axios.get(url);
 
-              const response = await axios.get(url);
+          if (!response?.data) {
+            throw new Error('Failed to fetch token image for: ' + coinId);
+          }
 
-              if (!response?.data) {
-                throw new Error('Failed to fetch token image for: ' + coinId);
-              }
+          return response.data?.image?.small;
+        } catch (error) {
+          if (error.response.status === 404) {
+            return null;
+          }
 
-              return response.data?.image?.small;
-            } catch (error) {
-              if (error.response.status === 404) {
-                return null;
-              }
-
-              throw error;
-            }
-          }),
-          {
-            onRetry: (error) =>
-              logger.warn(`Retry due to ${error.message}: ${url}`),
-          },
-        ),
-      { ttl: 3600000 },
+          throw error;
+        }
+      },
+      {
+        cacheKey,
+        logDetail: url,
+        ttl: 3600,
+      },
     );
   }
 
@@ -94,52 +84,42 @@ export class CoingeckoService {
     validate([coinId, fiatId, date], ['string', 'string', 'string']);
 
     const url = `${BASE_URL}/coins/${coinId}/history?date=${date}`;
-    const cacheKey = `coingecko.historicPriceOf['${coinId}']['${fiatId}']['${date}']`;
+    const cacheKey = `${url}_v1`;
 
-    return this.cache.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug('GET ' + url);
+    return this.wrapCall(
+      async () => {
+        try {
+          const response = await axios.get(url);
 
-            try {
-              const response = await axios.get(url);
+          if (!response?.data) {
+            throw new Error('Failed to fetch currency rates from coingecko');
+          }
 
-              if (!response?.data) {
-                throw new Error(
-                  'Failed to fetch currency rates from coingecko',
-                );
-              }
+          if (!response.data?.market_data?.current_price[fiatId]) {
+            return null;
+          }
 
-              if (!response.data?.market_data?.current_price[fiatId]) {
-                return null;
-              }
+          const id = `${coinId}_${fiatId}_${date}`;
 
-              const id = `${coinId}_${fiatId}_${date}`;
+          const price = response.data.market_data.current_price[fiatId];
 
-              const price = response.data.market_data.current_price[fiatId];
+          return {
+            id,
+            coinId,
+            fiatId,
+            price,
+          };
+        } catch (error) {
+          if (error.response.status === 404) {
+            return null;
+          }
 
-              return {
-                id,
-                coinId,
-                fiatId,
-                price,
-              };
-            } catch (error) {
-              if (error.response.status === 404) {
-                return null;
-              }
-
-              throw error;
-            }
-          }),
-          {
-            onRetry: (error) =>
-              logger.warn(`Retry due to ${error.message}: ${url}`),
-          },
-        ),
+          throw error;
+        }
+      },
       {
+        cacheKey,
+        logDetail: url,
         ttl: 0,
       },
     );
@@ -252,31 +232,26 @@ export class CoingeckoService {
     validate([coinIds, fiatId], ['Array.<string>', 'string']);
 
     const url = `${BASE_URL}/simple/price?ids=${coinIds.join()}&vs_currencies=${fiatId}`;
+    const cacheKey = `${url}_v1`;
 
-    return retry(
-      async () =>
-        await this.limiter.schedule(async () => {
-          logger.debug('GET ' + url);
+    return this.wrapCall(
+      async () => {
+        const response = await axios.get(url);
 
-          const response = await axios.get(url);
+        if (!response?.data) {
+          throw new Error('Failed to fetch currency rates from coingecko');
+        }
 
-          if (!response?.data) {
-            throw new Error('Failed to fetch currency rates from coingecko');
-          }
-
-          return _.keys(response.data).map((coinId) => {
-            return {
-              id: `${coinId}_${fiatId}`,
-              coinId: coinId,
-              fiatId,
-              price: response.data[coinId][fiatId.toLowerCase()],
-            };
-          });
-        }),
-      {
-        onRetry: (error) =>
-          logger.warn(`Retry due to ${error.message}: ${url}`),
+        return _.keys(response.data).map((coinId) => {
+          return {
+            id: `${coinId}_${fiatId}`,
+            coinId: coinId,
+            fiatId,
+            price: response.data[coinId][fiatId.toLowerCase()],
+          };
+        });
       },
+      { cacheKey, logDetail: url, ttl: 60 },
     );
   }
 
@@ -291,34 +266,27 @@ export class CoingeckoService {
     const url = `${BASE_URL}/coins/list?include_platform=true`;
     const cacheKey = 'coingecko.coins';
 
-    return this.cache.wrap(
-      cacheKey,
-      () =>
-        retry(
-          async () =>
-            await this.limiter.schedule(async () => {
-              logger.debug('GET ' + url);
+    return this.wrapCall(
+      async () => {
+        const response = await axios.get(url);
 
-              const response = await axios.get(url);
+        if (!Array.isArray(response.data)) {
+          throw new Error(`Could not retrieve coin list from coingecko`);
+        }
 
-              if (!Array.isArray(response.data)) {
-                throw new Error(`Could not retrieve coin list from coingecko`);
-              }
+        const geckoCoins = response.data.map((it) => ({
+          id: it.id,
+          symbol: it.symbol,
+          platforms: it.platforms,
+        }));
 
-              const geckoCoins = response.data.map((it) => ({
-                id: it.id,
-                symbol: it.symbol,
-                platforms: it.platforms,
-              }));
-
-              return geckoCoins;
-            }),
-          {
-            onRetry: (error) =>
-              logger.warn(`Retry due to ${error.message}: ${url}`),
-          },
-        ),
-      { ttl: 3600000 },
+        return geckoCoins;
+      },
+      {
+        cacheKey,
+        logDetail: url,
+        ttl: 3600,
+      },
     );
   }
 }
