@@ -4,19 +4,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import { Job, Queue } from 'bull';
 import { validate } from 'bycontract';
-import _ from 'lodash';
 import moment from 'moment';
 import { Model } from 'mongoose';
 import * as Rx from 'rxjs';
-import {
-  concatMap,
-  from,
-  lastValueFrom,
-  mergeMap,
-  Observable,
-  takeWhile,
-  tap,
-} from 'rxjs';
+import { Observable } from 'rxjs';
 import { AbstractApiService } from '../api/abstract-api.service';
 import { AssetContractDto, AssetEventDto } from './dto';
 import { AssetEvent } from './schema';
@@ -39,7 +30,7 @@ export class OpenseaService extends AbstractApiService {
     events: AssetEventDto[];
   }>();
 
-  get assetPollsSubject$() {
+  get assetPolls$() {
     return this.assetPollsSubject as Observable<{
       contractAddress: string;
       events: AssetEventDto[];
