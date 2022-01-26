@@ -33,12 +33,17 @@ export class OpenseaService extends AbstractApiService {
     return this.configService.openseaApiKey;
   }
 
-  private eventCursors: Record<string, number> = {};
+  // TODO: create an interface for this
+  private assetPollsSubject = new Rx.Subject<{
+    contractAddress: string;
+    events: AssetEventDto[];
+  }>();
 
-  private assetEventsSubject = new Rx.Subject<AssetEventDto>();
-
-  get assetEvents$() {
-    return this.assetEventsSubject as Observable<AssetEventDto>;
+  get assetPollsSubject$() {
+    return this.assetPollsSubject as Observable<{
+      contractAddress: string;
+      events: AssetEventDto[];
+    }>;
   }
 
   constructor(
@@ -67,67 +72,64 @@ export class OpenseaService extends AbstractApiService {
   async processEventsJob(job: Partial<Job<any>>) {
     const { tokenAddress, startAt } = job.data;
 
-    const occuredAfter = this.eventCursors[tokenAddress] ?? startAt;
+    const maxFromDatabase = await this.assetEventModel
+      .where({
+        contractAddress: tokenAddress,
+      })
+      .sort('-createdDate')
+      .limit(1)
+      .exec();
+
+    const occuredAfter = maxFromDatabase[0]?.createdDate ?? startAt;
 
     const maxPages = 100;
     const pageSize = 100;
+    const allEvents = [];
 
-    await lastValueFrom(
-      from(_.range(maxPages)).pipe(
-        concatMap(async (page) => {
-          const newEvents = await this.fetchEvents(
-            tokenAddress,
-            occuredAfter,
-            pageSize,
-            page * pageSize,
-          );
+    for (let page = 0; page < maxPages; page++) {
+      const nextEvents = await this.fetchEvents(
+        tokenAddress,
+        occuredAfter,
+        pageSize,
+        page * pageSize,
+      );
 
-          return newEvents;
+      if (nextEvents.length === 0) {
+        break;
+      }
+
+      await this.assetEventModel.bulkWrite(
+        nextEvents.map((newEvent) => {
+          const event: AssetEvent = {
+            id: newEvent.id,
+            contractAddress: tokenAddress,
+            createdDate: moment(`${newEvent.created_date}Z`).unix(),
+            eventType: newEvent.event_type,
+            details: newEvent,
+          };
+
+          return {
+            updateOne: {
+              filter: { id: event.id },
+              update: { $set: event },
+              upsert: true,
+            },
+          };
         }),
-        takeWhile((events) => events.length > 0),
-        mergeMap(async (eventDtos) => {
-          await this.assetEventModel.bulkWrite(
-            eventDtos.map((eventDto) => {
-              const event: AssetEvent = {
-                id: eventDto.id,
-                contractAddress: tokenAddress,
-                createdDate: moment(`${eventDto.created_date}Z`).unix(),
-                eventType: eventDto.event_type,
-                event: eventDto,
-              };
+      );
 
-              return {
-                updateOne: {
-                  filter: { id: event.id },
-                  update: { $set: event },
-                  upsert: true,
-                },
-              };
-            }),
-          );
-          return eventDtos;
-        }),
-        mergeMap((newEvents) => newEvents),
-        tap((event) => this.assetEventsSubject.next(event)),
-      ),
-    );
+      allEvents.push(...nextEvents);
 
-    const url = `${BASE_URL}/events?asset_contract_address=${tokenAddress}&only_opensea=false&limit=300&occurred_after=${occuredAfter}`;
+      if (nextEvents.length < 100) {
+        break;
+      }
+    }
 
-    const events = await this.get<AssetEventDto[]>(
-      url,
-      undefined,
-      undefined,
-      (response) => response?.data?.asset_events ?? [],
-    );
-
-    if (events?.length > 0) {
-      this.eventCursors[tokenAddress] = _.chain(events)
-        .map((event) => event.created_date ?? event.listing_time)
-        .max()
-        .value();
-
-      this.assetEventsSubject.next(events);
+    if (allEvents.length > 0) {
+      this.assetPollsSubject.next({
+        contractAddress: tokenAddress,
+        events: allEvents,
+      });
     }
   }
 
@@ -174,7 +176,7 @@ export class OpenseaService extends AbstractApiService {
 
     const events = await this.assetEventModel.find(query).exec();
 
-    return events.map((event) => event.event);
+    return events.map((event) => event.details);
   }
 
   fetchEvents(

@@ -19,7 +19,7 @@ export class AssetEvent {
   contractAddress: string;
 
   @Prop({ type: 'object' })
-  event: AssetEventDto;
+  details: AssetEventDto;
 }
 
 export const AssetEventSchema = SchemaFactory.createForClass(AssetEvent);

@@ -3,5 +3,6 @@ import { ClientStateDto } from '../dtos';
 
 export interface ClientStateChangedEvent {
   readonly clientId: string;
+  readonly received: number;
   readonly state: ClientStateDto;
 }

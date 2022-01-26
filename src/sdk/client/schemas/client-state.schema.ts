@@ -9,6 +9,9 @@ export class ClientState {
   @Prop({ index: true })
   clientId: string;
 
+  @Prop({ index: true })
+  received: number;
+
   @Prop({ type: 'object' })
   state: ClientStateDto;
 }

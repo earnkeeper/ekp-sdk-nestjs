@@ -29,8 +29,8 @@ export class ClientService {
     this.publishClient = redisService.getClient('PUBLISH_CLIENT');
   }
 
-  addLayers(clientId: string, layers: LayerDto[]) {
-    this.publishClient.publish(
+  addLayers(clientId: string, layers: LayerDto[]): Promise<number> {
+    return this.publishClient.publish(
       ADD_LAYERS,
       JSON.stringify({
         clientId,
@@ -39,8 +39,8 @@ export class ClientService {
     );
   }
 
-  removeLayers(clientId: string, query: LayerQueryDto) {
-    this.publishClient.publish(
+  removeLayers(clientId: string, query: LayerQueryDto): Promise<number> {
+    return this.publishClient.publish(
       REMOVE_LAYERS,
       JSON.stringify({
         clientId,
@@ -48,6 +48,7 @@ export class ClientService {
       }),
     );
   }
+
   private clientStateEventsSubject = new Subject<ClientStateChangedEvent>();
 
   get clientStateEvents$(): Observable<ClientStateChangedEvent> {

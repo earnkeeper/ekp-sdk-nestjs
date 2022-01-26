@@ -32,12 +32,29 @@ describe(OpenseaService.name, () => {
   });
 
   test(`sync events populates the database`, async () => {
+    await openseaQueue.empty();
+    const queueCount = await openseaQueue.count();
+    expect(queueCount).toEqual(0);
+
     await openseaService.assetEventModel.remove({
       id: {
         $gte: 0,
       },
     });
+
+    const maxFromDatabase = await openseaService.assetEventModel
+      .where({
+        contractAddress: CONTRACT_ADDRESS,
+      })
+      .sort('-createdDate')
+      .limit(1)
+      .exec();
+
+    expect(maxFromDatabase).toHaveLength(0);
+
     const startAt = moment().subtract(1, 'hour').unix();
+
+    console.log(startAt);
 
     const events1 = await openseaService.eventsOf(CONTRACT_ADDRESS, startAt);
     expect(events1).toHaveLength(0);
@@ -48,13 +65,29 @@ describe(OpenseaService.name, () => {
 
     const events2 = await openseaService.eventsOf(CONTRACT_ADDRESS, startAt, [
       'created',
+      'successful',
     ]);
 
     expect(events2.length).toBeGreaterThan(0);
 
     expect(
-      _.every(events2, (event) => event.event_type === 'created'),
+      _.every(
+        events2,
+        (event) =>
+          event.event_type === 'created' || event.event_type === 'successful',
+      ),
     ).toBeTruthy();
+
+    await openseaService.processEventsJob({
+      data: { tokenAddress: CONTRACT_ADDRESS, startAt: startAt },
+    });
+
+    const events3 = await openseaService.eventsOf(CONTRACT_ADDRESS, startAt, [
+      'created',
+      'successful',
+    ]);
+
+    expect(events3).toHaveLength(events2.length);
   });
 
   afterAll(async () => {

@@ -70,6 +70,7 @@ export class SocketService {
 
     this.queueClientStateChangedEvent({
       clientId: client.id,
+      received: moment().unix(),
       ...JSON.parse(payload),
     });
   }

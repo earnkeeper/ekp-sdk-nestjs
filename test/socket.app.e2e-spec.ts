@@ -2,6 +2,7 @@ import { getQueueToken } from '@nestjs/bull';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Queue } from 'bull';
+import moment from 'moment';
 import { ClientStateDto, CLIENT_EVENT_QUEUE, SocketApp } from '../src';
 import { SocketService } from '../src/socket/socket.service';
 
@@ -40,6 +41,7 @@ describe(SocketApp.name, () => {
 
     await socketService.queueClientStateChangedEvent({
       clientId: 'test',
+      received: moment().unix(),
       state: clientStateDtoFixture,
     });
 
