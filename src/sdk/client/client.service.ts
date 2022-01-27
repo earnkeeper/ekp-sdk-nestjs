@@ -67,6 +67,7 @@ export class ClientService {
       { clientId: event.clientId },
       {
         clientId: event.clientId,
+        recevied: event.received,
         state: event.state,
       },
       { upsert: true },
