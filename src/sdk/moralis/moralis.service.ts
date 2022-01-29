@@ -30,6 +30,7 @@ export class MoralisService {
   ) {
     this.limiter = limiterService.createLimiter('moralis-limiter', {
       minTime: 100,
+      maxConcurrent: 20,
     });
   }
 
