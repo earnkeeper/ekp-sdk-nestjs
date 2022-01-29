@@ -11,6 +11,13 @@ import { LimiterService } from './limiter.service';
 import { MoralisService } from './moralis/moralis.service';
 import { OpenseaService, OPENSEA_QUEUE } from './opensea/opensea.service';
 import { AssetEvent, AssetEventSchema } from './opensea/schema';
+import {
+  TokenTransfer,
+  TokenTransferSchema,
+  Transaction,
+  TransactionSchema,
+} from './transaction/schema';
+import { TransactionService } from './transaction/transaction.service';
 @Global()
 @Module({
   imports: [
@@ -20,6 +27,8 @@ import { AssetEvent, AssetEventSchema } from './opensea/schema';
     MongooseModule.forRootAsync({ useClass: EkConfigService }),
     MongooseModule.forFeature([
       { name: AssetEvent.name, schema: AssetEventSchema },
+      { name: Transaction.name, schema: TransactionSchema },
+      { name: TokenTransfer.name, schema: TokenTransferSchema },
     ]),
     RedisModule.forRootAsync(EkConfigService.createRedisAsyncOptions()),
     BullModule.registerQueue({ name: OPENSEA_QUEUE }),
@@ -32,6 +41,7 @@ import { AssetEvent, AssetEventSchema } from './opensea/schema';
     LimiterService,
     MoralisService,
     OpenseaService,
+    TransactionService,
   ],
   exports: [
     ClientModule,
@@ -41,6 +51,7 @@ import { AssetEvent, AssetEventSchema } from './opensea/schema';
     LimiterService,
     MoralisService,
     OpenseaService,
+    TransactionService,
   ],
 })
 export class SdkModule {}

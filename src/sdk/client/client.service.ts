@@ -2,10 +2,11 @@ import { Process, Processor } from '@nestjs/bull';
 import { InjectModel } from '@nestjs/mongoose';
 import { Job } from 'bull';
 import { Redis } from 'ioredis';
+import moment from 'moment';
 import { Model } from 'mongoose';
 import { RedisService } from 'nestjs-redis';
 import { Observable, Subject } from 'rxjs';
-import { LayerDto, LayerQueryDto } from '../dtos';
+import { EkDocument, LayerDto, LayerQueryDto } from '../dtos';
 import {
   ADD_LAYERS,
   ClientDisconnectedEvent,
@@ -81,5 +82,49 @@ export class ClientService {
     const clientId = job.data?.clientId;
 
     await this.clientStateModel.findOneAndDelete({ clientId: clientId });
+  }
+
+  /**
+   * Emit documents to the client
+   *
+   *
+   * @param clientEvent event containing client details
+   * @param collectionName the collection name to emit to
+   * @param documents the documents to emit
+   * @returns a promise that resolves once emitted
+   */
+  async emitDocuments(
+    clientEvent: ClientStateChangedEvent,
+    collectionName: string,
+    documents: EkDocument[],
+  ) {
+    return this.addLayers(clientEvent.clientId, [
+      {
+        id: `${collectionName}-documents`,
+        collectionName,
+        set: documents,
+        tags: [collectionName],
+        timestamp: moment().unix(),
+      },
+    ]);
+  }
+
+  async emitBusy(event: ClientStateChangedEvent, collectionName: string) {
+    const addLayers = [
+      {
+        id: `busy-${collectionName}`,
+        collectionName: 'busy',
+        set: [{ id: collectionName }],
+      },
+    ];
+    await this.addLayers(event.clientId, addLayers);
+  }
+
+  async emitDone(event: ClientStateChangedEvent, collectionName: string) {
+    const removeQuery = {
+      id: `busy-${collectionName}`,
+    };
+
+    await this.removeLayers(event.clientId, removeQuery);
   }
 }

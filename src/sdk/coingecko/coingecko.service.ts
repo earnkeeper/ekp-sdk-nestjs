@@ -22,9 +22,9 @@ export class CoingeckoService extends AbstractApiService {
       name: 'CoingeckoService',
       limit: {
         minTime: 250,
-        maxConcurrent: 25,
-        reservoir: 50,
-        reservoirRefreshAmount: 50,
+        maxConcurrent: 5,
+        reservoir: 40,
+        reservoirRefreshAmount: 40,
         reservoirRefreshInterval: 60000,
       },
     });
@@ -79,12 +79,16 @@ export class CoingeckoService extends AbstractApiService {
   async historicPriceOf(
     coinId: string,
     fiatId: string,
-    date: string,
+    date: number,
   ): Promise<CoinPrice> {
-    validate([coinId, fiatId, date], ['string', 'string', 'string']);
+    validate([coinId, fiatId, date], ['string', 'string', 'number']);
 
-    const url = `${BASE_URL}/coins/${coinId}/history?date=${date}`;
-    const cacheKey = `${url}_v1`;
+    const dateMoment = moment.unix(date);
+
+    const url = `${BASE_URL}/coins/${coinId}/history?date=${dateMoment.format(
+      'DD-MM-YYYY',
+    )}`;
+    const cacheKey = `${url}_v8`;
 
     return this.wrapCall(
       async () => {
@@ -96,10 +100,10 @@ export class CoingeckoService extends AbstractApiService {
           }
 
           if (!response.data?.market_data?.current_price[fiatId]) {
-            return null;
+            return undefined;
           }
 
-          const id = `${coinId}_${fiatId}_${date}`;
+          const id = `${coinId}_${fiatId}_${dateMoment.unix()}`;
 
           const price = response.data.market_data.current_price[fiatId];
 
@@ -108,10 +112,11 @@ export class CoingeckoService extends AbstractApiService {
             coinId,
             fiatId,
             price,
+            timestamp: date,
           };
         } catch (error) {
           if (error.response.status === 404) {
-            return null;
+            return undefined;
           }
 
           throw error;
@@ -258,6 +263,7 @@ export class CoingeckoService extends AbstractApiService {
   private allCoins: GeckoCoin[];
 
   async onModuleInit() {
+    super.onModuleInit();
     this.allCoins = await this.fetchGeckoCoins();
     logger.log('Coingecko service initialized');
   }

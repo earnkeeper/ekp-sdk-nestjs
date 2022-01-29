@@ -7,4 +7,5 @@ export * from './events';
 export * from './moralis';
 export * from './opensea';
 export * from './sdk.module';
+export * from './transaction';
 export * from './util';
