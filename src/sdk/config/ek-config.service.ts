@@ -98,7 +98,7 @@ export class EkConfigService
         host: this.redisHost,
         port: this.redisPort,
       },
-      prefix: `${this.pluginId}_v1_`,
+      prefix: `v1_`,
     };
   }
 
