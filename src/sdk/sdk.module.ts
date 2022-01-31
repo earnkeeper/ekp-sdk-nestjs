@@ -11,6 +11,8 @@ import { LimiterService } from './limiter.service';
 import { MoralisService } from './moralis/moralis.service';
 import { OpenseaService, OPENSEA_QUEUE } from './opensea/opensea.service';
 import { AssetEvent, AssetEventSchema } from './opensea/schema';
+import { PriceService } from './price/price.service';
+import { FiatPrice, FiatPriceSchema } from './price/schema';
 import {
   TokenTransfer,
   TokenTransferSchema,
@@ -29,6 +31,7 @@ import { TransactionService } from './transaction/transaction.service';
       { name: AssetEvent.name, schema: AssetEventSchema },
       { name: Transaction.name, schema: TransactionSchema },
       { name: TokenTransfer.name, schema: TokenTransferSchema },
+      { name: FiatPrice.name, schema: FiatPriceSchema },
     ]),
     RedisModule.forRootAsync(EkConfigService.createRedisAsyncOptions()),
     BullModule.registerQueue({ name: OPENSEA_QUEUE }),
@@ -41,6 +44,7 @@ import { TransactionService } from './transaction/transaction.service';
     LimiterService,
     MoralisService,
     OpenseaService,
+    PriceService,
     TransactionService,
   ],
   exports: [
@@ -51,6 +55,7 @@ import { TransactionService } from './transaction/transaction.service';
     LimiterService,
     MoralisService,
     OpenseaService,
+    PriceService,
     TransactionService,
   ],
 })

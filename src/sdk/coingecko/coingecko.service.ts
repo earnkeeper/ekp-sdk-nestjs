@@ -6,7 +6,8 @@ import _ from 'lodash';
 import moment from 'moment';
 import { AbstractApiService } from '../api/abstract-api.service';
 import { ChainId, chains, logger } from '../util';
-import { CoinPrice } from './model/coin-price';
+import { CoinPrice as CoinPriceDto } from './model/coin-price';
+import { getAndHandle } from '../util/axios';
 const BASE_URL = 'https://api.coingecko.com/api/v3';
 
 interface GeckoCoin {
@@ -23,8 +24,8 @@ export class CoingeckoService extends AbstractApiService {
       limit: {
         minTime: 250,
         maxConcurrent: 5,
-        reservoir: 40,
-        reservoirRefreshAmount: 40,
+        reservoir: 30,
+        reservoirRefreshAmount: 30,
         reservoirRefreshInterval: 60000,
       },
     });
@@ -80,7 +81,7 @@ export class CoingeckoService extends AbstractApiService {
     coinId: string,
     fiatId: string,
     date: number,
-  ): Promise<CoinPrice> {
+  ): Promise<CoinPriceDto> {
     validate([coinId, fiatId, date], ['string', 'string', 'number']);
 
     const dateMoment = moment.unix(date);
@@ -130,79 +131,39 @@ export class CoingeckoService extends AbstractApiService {
     );
   }
 
-  async dailyPricesOf(coinId: string, fiatId: string): Promise<CoinPrice[]> {
-    validate([coinId, fiatId], ['string', 'string']);
-
-    const cacheKey = `coingecko.dailyPricesOf['${coinId}']['${fiatId}']`;
-
-    const cachedValues: CoinPrice[] = await this.cache.get(cacheKey);
-
-    let from = 1262044800; //Tuesday, 29 December 2009 00:00:00
-    const to = moment().unix();
-
-    if (Array.isArray(cachedValues)) {
-      if (cachedValues.length === 0) {
-        return cachedValues;
-      }
-      from = _.chain(cachedValues).map('timestamp').max().value();
-    }
-
-    if (from > moment().startOf('day').unix()) {
-      return cachedValues;
-    }
-
+  async fetchMarketChart(
+    coinId: string,
+    fiatId: string,
+    from: number,
+    to: number,
+  ): Promise<CoinPriceDto[]> {
     const url = `${BASE_URL}/coins/${coinId}/market_chart/range?vs_currency=${fiatId}&from=${from}&to=${to}`;
 
-    return this.cache.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            try {
-              logger.debug('GET ' + url);
+    return this.wrapCall(
+      async () => {
+        const response = await getAndHandle(url, { allow404: true });
 
-              const response = await axios.get(url);
+        if (!response?.data) {
+          return [];
+        }
 
-              if (!response?.data) {
-                throw new Error(
-                  'Failed to fetch currency rates from coingecko',
-                );
-              }
+        const prices: number[][] = response.data?.prices;
 
-              const prices: number[][] = response.data?.prices;
-
-              if (!prices) {
-                return cachedValues ?? [];
-              }
-
-              const newCoinPrices = _.chain(prices)
-                .map(
-                  ([timestamp, price]) =>
-                    <CoinPrice>{
-                      id: `${coinId}_${fiatId}_${Math.floor(timestamp / 1000)}`,
-                      coinId,
-                      fiatId,
-                      timestamp: Math.floor(timestamp / 1000),
-                      price,
-                    },
-                )
-                .value();
-
-              return [...(cachedValues ?? []), ...newCoinPrices];
-            } catch (error) {
-              if (error.response.status === 404) {
-                return [];
-              }
-              throw error;
-            }
-          }),
-          {
-            onRetry: (error) =>
-              logger.warn(`Retry due to ${error.message}: ${url}`),
-          },
-        ),
+        return _.chain(prices)
+          .map(
+            ([timestamp, price]) =>
+              <CoinPriceDto>{
+                id: `${coinId}_${fiatId}_${Math.floor(timestamp / 1000)}`,
+                coinId,
+                fiatId,
+                timestamp: Math.floor(timestamp / 1000),
+                price,
+              },
+          )
+          .value();
+      },
       {
-        ttl: 0,
+        logDetail: url,
       },
     );
   }
@@ -233,7 +194,7 @@ export class CoingeckoService extends AbstractApiService {
   async latestPricesOf(
     coinIds: string[],
     fiatId: string,
-  ): Promise<CoinPrice[]> {
+  ): Promise<CoinPriceDto[]> {
     validate([coinIds, fiatId], ['Array.<string>', 'string']);
 
     const url = `${BASE_URL}/simple/price?ids=${coinIds.join()}&vs_currencies=${fiatId}`;
