@@ -387,10 +387,10 @@
     enabled "2.0.x"
     kuler "^2.0.0"
 
-"@earnkeeper/ekp-ui@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@earnkeeper/ekp-ui/-/ekp-ui-0.1.1.tgz#8659e80b3376a2c610e1aaee82e087718d2a0e8d"
-  integrity sha512-0oYeBPmGP6VgT8/TE/pN0YC2a9e1yFyGDPLbVHmn0cn/mVE/kD9LhVj4benHLKzoF7ltoLK+cB9lFt+DSq4egQ==
+"@earnkeeper/ekp-ui@^0.1.3":
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/@earnkeeper/ekp-ui/-/ekp-ui-0.1.3.tgz#09bd45db4d928bd638a7da4bd303bbb3da0f8bdb"
+  integrity sha512-yWHI8knsDNnQO3U57ehXJTi3Uj0nfKGZ4LZ7warQnR4kq7oVH0mmU1B9J5ZapfCFraFEOMd8IkIaWNsMv0tsAg==
 
 "@eslint/eslintrc@^0.4.3":
   version "0.4.3"
