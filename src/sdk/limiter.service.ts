@@ -6,6 +6,10 @@ import { EkConfigService } from './config/ek-config.service';
 export class LimiterService {
   constructor(private configService: EkConfigService) {}
 
+  createMutex(id: string) {
+    return this.createLimiter(`${id}-mutex`, { maxConcurrent: 1 });
+  }
+
   createLimiter(id: string, options: number | Bottleneck.ConstructorOptions) {
     if (typeof options === 'number') {
       return new Bottleneck({

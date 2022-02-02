@@ -1,8 +1,8 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import retry from 'async-retry';
 import { validate } from 'bycontract';
-import { Cache } from 'cache-manager';
 import { ethers } from 'ethers';
+import { CacheService } from '../cache/cache.service';
 import { LimiterService } from '../limiter.service';
 import { logger, safeBigNumberFrom } from '../util';
 import { EthersTransaction } from './ethers-transaction';
@@ -10,7 +10,7 @@ import { EthersTransaction } from './ethers-transaction';
 @Injectable()
 export class EthersService {
   constructor(
-    @Inject(CACHE_MANAGER) private cache: Cache,
+    private cacheService: CacheService,
     private limiterService: LimiterService,
   ) {}
 
@@ -45,6 +45,45 @@ export class EthersService {
     return this.providers[chainId]?.provider;
   }
 
+  async send(
+    chainId: string,
+    to: string,
+    data: string | number | string[],
+    abiOutput?: string[],
+  ) {
+    validate([chainId, to, data], ['string', 'string', 'string|number|Array']);
+
+    const limiter = this.providers[chainId].limiter;
+    const provider = this.providers[chainId]
+      ?.provider as ethers.providers.JsonRpcProvider;
+
+    const debugKey = `Sending data to ${to}`;
+
+    return retry(
+      async () => {
+        return limiter.schedule(async () => {
+          logger.debug(debugKey);
+          const response = await provider.send('eth_call', [
+            { to, data },
+            'latest',
+          ]);
+
+          if (!!abiOutput) {
+            return new ethers.utils.AbiCoder().decode(abiOutput, response);
+          }
+
+          return response;
+        });
+      },
+      {
+        onRetry: (error) => {
+          logger.warn(`Retry due to ${error.message}: ${debugKey}`);
+          console.error(error);
+        },
+      },
+    );
+  }
+
   async wrapProviderCall<T>(
     chainId: string,
     call: (provider: ethers.providers.Provider) => Promise<T>,
@@ -77,7 +116,7 @@ export class EthersService {
 
     const limiter = this.providers[chainId].limiter;
 
-    const result: EthersTransaction = await this.cache.wrap(
+    const result: EthersTransaction = await this.cacheService.wrap(
       cacheKey,
       () =>
         retry(

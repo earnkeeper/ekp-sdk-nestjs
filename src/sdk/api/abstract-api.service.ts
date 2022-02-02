@@ -1,7 +1,7 @@
-import { CACHE_MANAGER, Inject } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import retry from 'async-retry';
 import Bottleneck from 'bottleneck';
-import { Cache } from 'cache-manager';
+import { CacheService } from '../cache/cache.service';
 import { EkConfigService } from '../config/ek-config.service';
 import { LimiterService } from '../limiter.service';
 import { logger } from '../util/default-logger';
@@ -19,8 +19,8 @@ export interface CallWrapperOptions {
 
 export class AbstractApiService {
   protected limiter: Bottleneck;
-  @Inject(CACHE_MANAGER)
-  protected cache: Cache;
+  @Inject()
+  protected cacheService: CacheService;
   @Inject()
   protected limiterService: LimiterService;
   @Inject()
@@ -39,7 +39,7 @@ export class AbstractApiService {
     options?: CallWrapperOptions,
   ): Promise<T> {
     if (!!options.cacheKey) {
-      const cachedValue = await this.cache.get<T>(options.cacheKey);
+      const cachedValue = await this.cacheService.get<T>(options.cacheKey);
       if (cachedValue !== null) {
         return cachedValue;
       }
@@ -59,7 +59,7 @@ export class AbstractApiService {
               ? { ttl: options.ttl }
               : undefined;
 
-            await this.cache.set(options.cacheKey, result, cacheOptions);
+            await this.cacheService.set(options.cacheKey, result, cacheOptions);
           }
           return result;
         };

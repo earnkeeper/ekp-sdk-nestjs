@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bull';
 import { CacheModule, Global, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RedisModule } from 'nestjs-redis';
+import { CacheService } from './cache/cache.service';
 import { ClientModule } from './client/client.module';
 import { CoingeckoService } from './coingecko/coingecko.service';
 import { EkConfigModule } from './config/ek-config.module';
@@ -38,6 +39,7 @@ import { TransactionService } from './transaction/transaction.service';
     ClientModule,
   ],
   providers: [
+    CacheService,
     CoingeckoService,
     EkConfigService,
     EthersService,
@@ -48,6 +50,7 @@ import { TransactionService } from './transaction/transaction.service';
     TransactionService,
   ],
   exports: [
+    CacheService,
     ClientModule,
     EkConfigModule,
     CoingeckoService,

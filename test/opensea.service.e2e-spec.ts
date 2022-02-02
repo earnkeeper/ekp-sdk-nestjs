@@ -54,8 +54,6 @@ describe(OpenseaService.name, () => {
 
     const startAt = moment().subtract(1, 'hour').unix();
 
-    console.log(startAt);
-
     const events1 = await openseaService.eventsOf(CONTRACT_ADDRESS, startAt);
     expect(events1).toHaveLength(0);
 

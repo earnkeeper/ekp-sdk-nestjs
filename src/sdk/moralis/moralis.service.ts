@@ -1,10 +1,10 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import retry from 'async-retry';
 import Bottleneck from 'bottleneck';
 import { validate } from 'bycontract';
-import { Cache } from 'cache-manager';
 import moment from 'moment';
 import Moralis from 'moralis/node';
+import { CacheService } from '../cache/cache.service';
 import { EkConfigService } from '../config/ek-config.service';
 import { LimiterService } from '../limiter.service';
 import { ChainId, chains, logger } from '../util';
@@ -24,7 +24,7 @@ import {
 @Injectable()
 export class MoralisService {
   constructor(
-    @Inject(CACHE_MANAGER) private cache: Cache,
+    private cacheService: CacheService,
     limiterService: LimiterService,
     private configService: EkConfigService,
   ) {
@@ -53,7 +53,7 @@ export class MoralisService {
     const cacheKey = `moralis.latestTokenPriceOf_['${chainId}']['${tokenAddress}']`;
     const debugMessage = `Web3API > getTokenPrice('${chainId}', '${tokenAddress}')`;
 
-    return this.cache.wrap(
+    return this.cacheService.wrap(
       cacheKey,
       () =>
         retry(
@@ -106,7 +106,7 @@ export class MoralisService {
     const cacheKey = `moralis.nftTransfersOfTokenId['${chainId}']['${tokenAddress}'][${tokenId}]`;
     const debugMessage = `Web3API > getWalletTokenIdTransfers('${chainId}', '${tokenAddress}', ${tokenId})`;
 
-    return this.cache.wrap(
+    return this.cacheService.wrap(
       cacheKey,
       () =>
         retry(
@@ -158,7 +158,7 @@ export class MoralisService {
     const cacheKey = `v3_moralis.tokenPriceOf['${chainId}']['${tokenAddress}'][${blockNumber}]`;
     const debugMessage = `Web3API > getTokenPrice('${chainId}', '${tokenAddress}', ${blockNumber})`;
 
-    return this.cache.wrap(
+    return this.cacheService.wrap(
       cacheKey,
       () =>
         retry(
@@ -217,7 +217,7 @@ export class MoralisService {
     const cacheKey = `moralis.tokenMetadataOf__['${chainId}']['${contractAddress}']`;
     const debugMessage = `Web3API > getTokenMetadata('${chainId}', '${contractAddress}')`;
 
-    return this.cache.wrap(
+    return this.cacheService.wrap(
       cacheKey,
       () =>
         retry(
@@ -260,7 +260,7 @@ export class MoralisService {
     const cacheKey = `moralis.nativeBalance_['${chainId}']['${ownerAddress}']`;
     const debugMessage = `Web3API > getNativeBalance('${chainId}', '${ownerAddress}')`;
 
-    return this.cache.wrap(
+    return this.cacheService.wrap(
       cacheKey,
       () =>
         retry(
@@ -297,7 +297,7 @@ export class MoralisService {
     const cacheKey = `moralis.tokensByOwner_['${chainId}']['${ownerAddress}']`;
     const debugMessage = `Web3API > getTokenBalances('${chainId}', '${ownerAddress}')`;
 
-    const tokens: TokenBalanceDto[] = await this.cache.wrap(
+    const tokens: TokenBalanceDto[] = await this.cacheService.wrap(
       cacheKey,
       () =>
         retry(
@@ -361,7 +361,7 @@ export class MoralisService {
     const cacheKey = `moralis.nftsByOwner_['${chainId}']['${ownerAddress}']`;
     const debugMessage = `Web3API > getNFTs('${chainId}', '${ownerAddress}')`;
 
-    return this.cache.wrap(
+    return this.cacheService.wrap(
       cacheKey,
       () =>
         retry(
@@ -402,7 +402,7 @@ export class MoralisService {
 
     const debugMessage = `Web3API > getNFTMetadata('${chainId}', '${contractAddress}')`;
 
-    return this.cache.wrap(
+    return this.cacheService.wrap(
       cacheKey,
       () =>
         retry(
@@ -480,7 +480,7 @@ export class MoralisService {
 
     const cacheKey = `moralis.allTokenTransfersOf_['${chainId}']['${ownerAddress}']`;
 
-    return this.cache.wrap(
+    return this.cacheService.wrap(
       cacheKey,
       async () => {
         while (true) {
@@ -556,7 +556,7 @@ export class MoralisService {
     const cacheKey = `moralis.nftContractTransfersOf__['${chainId}']['${contractAddress}'][${limit}]`;
     const debugMessage = `Web3API > getContractNFTTransfers('${chainId}', '${contractAddress}', ${limit})`;
 
-    return this.cache.wrap(
+    return this.cacheService.wrap(
       cacheKey,
       () =>
         retry(
@@ -604,7 +604,7 @@ export class MoralisService {
     // // TODO: once moralis has fixed ERC20 contracts appearing in the NFT list, can remove this
     const bannedContracts = ['0xe9e7cea3dedca5984780bafc599bd69add087d56'];
 
-    return this.cache.wrap(
+    return this.cacheService.wrap(
       cacheKey,
       () =>
         retry(
