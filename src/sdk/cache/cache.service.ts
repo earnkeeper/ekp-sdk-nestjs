@@ -12,7 +12,7 @@ export class CacheService {
   ): Promise<T> {
     const cached = await this.get<T>(cacheKey);
 
-    if (cached === 'undefined') {
+    if (cached === 'unknown') {
       return undefined;
     }
 
@@ -20,7 +20,7 @@ export class CacheService {
       const result = await fn();
 
       if (result === undefined || result === null) {
-        await this.set(cacheKey, 'undefined', config);
+        await this.set(cacheKey, 'unknown', config);
       } else {
         await this.set(cacheKey, result, config);
       }
