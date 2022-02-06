@@ -40,6 +40,7 @@ export class EkConfigService
     this.redisUser = this.optional('REDIS_USER', undefined);
     this.redisPassword = this.optional('REDIS_PASSWORD', undefined);
     this.openseaApiKey = this.optional('OPENSEA_API_KEY', undefined);
+    this.sentryDsn = this.optional('SENTRY_DSN', undefined);
   }
 
   readonly pluginId: string;
@@ -56,6 +57,11 @@ export class EkConfigService
   readonly redisUser: string;
   readonly redisPassword: string;
   readonly openseaApiKey: string;
+  readonly sentryDsn: string;
+
+  get sentryEnabled() {
+    return !!this.sentryDsn;
+  }
 
   static createRedisAsyncOptions(): RedisModuleAsyncOptions {
     return {

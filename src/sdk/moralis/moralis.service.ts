@@ -1,12 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import retry from 'async-retry';
-import Bottleneck from 'bottleneck';
 import { validate } from 'bycontract';
-import moment from 'moment';
 import Moralis from 'moralis/node';
-import { CacheService } from '../cache/cache.service';
-import { EkConfigService } from '../config/ek-config.service';
-import { LimiterService } from '../limiter.service';
+import { AbstractApiService } from '../api/abstract-api.service';
 import { ChainId, chains, logger } from '../util';
 import { TokenMetadata } from '../util/chain/models/TokenMetadata';
 import {
@@ -25,28 +20,30 @@ import {
 const BASE_URL = 'https://deep-index.moralis.io/api/v2';
 
 @Injectable()
-export class MoralisService {
-  constructor(
-    private cacheService: CacheService,
-    limiterService: LimiterService,
-    private configService: EkConfigService,
-  ) {
-    this.limiter = limiterService.createLimiter('moralis-limiter', {
-      minTime: 100,
-      maxConcurrent: 20,
+export class MoralisService extends AbstractApiService {
+  constructor() {
+    super({
+      name: MoralisService.name,
+      limit: {
+        minTime: 100,
+        maxConcurrent: 20,
+      },
     });
   }
 
   async onModuleInit() {
-    await Moralis.start({
-      serverUrl: this.configService.moralisServerUrl,
-      appId: this.configService.moralisAppId,
-    });
+    try {
+      await Moralis.start({
+        serverUrl: this.configService.moralisServerUrl,
+        appId: this.configService.moralisAppId,
+      });
 
-    logger.log('Moralis service initialized');
+      logger.log('Moralis service initialized');
+    } catch (error) {
+      this.sentryService.captureError(error);
+      throw error;
+    }
   }
-
-  private limiter: Bottleneck;
 
   async lowestPriceOfNft(
     chainId: ChainId,
@@ -54,49 +51,30 @@ export class MoralisService {
     days: number,
   ): Promise<TradeDto> {
     const url = `${BASE_URL}/nft/${contractAddress}/lowestprice?chain=${chainId}&days=${days}`;
-    const cacheKey = `v1_${url}`;
 
-    return this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(url);
-            console.debug(this.limiter.counts());
-
-            try {
-              const start = moment().unix();
-
-              const result = await Moralis.Web3API.token.getNFTLowestPrice({
-                chain: chainId,
-                days,
-                address: contractAddress,
-              });
-
-              console.debug(`request time: ${moment().unix() - start}`);
-
-              return {
-                ...result,
-                chain_id: chainId,
-              };
-            } catch (error) {
-              if (error.message === 'Could not get NFT lower Price') {
-                return undefined;
-              }
-              console.error(error);
-              throw error;
-            }
-          }),
-          {
-            onRetry: (error: any) => {
-              console.error(error);
-
-              return logger.warn(`Retry due to ${error.message}: ${url}`);
-            },
-          },
-        ),
+    return this.handleCall(
       {
+        url,
         ttl: 1800,
+      },
+      async () => {
+        try {
+          const result = await Moralis.Web3API.token.getNFTLowestPrice({
+            chain: chainId,
+            days,
+            address: contractAddress,
+          });
+
+          return {
+            ...result,
+            chain_id: chainId,
+          };
+        } catch (error) {
+          if (error.message === 'Could not get NFT lower Price') {
+            return undefined;
+          }
+          throw error;
+        }
       },
     );
   }
@@ -107,56 +85,35 @@ export class MoralisService {
   ): Promise<ERC20PriceDto> {
     validate([chainId, tokenAddress], ['string', 'string']);
 
-    const cacheKey = `v3_moralis.latestTokenPriceOf['${chainId}']['${tokenAddress}']`;
-    const debugMessage = `Web3API > getTokenPrice('${chainId}', '${tokenAddress}')`;
+    const url = `${BASE_URL}/erc20/${tokenAddress}/price?chain=${chainId}`;
 
-    return this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(debugMessage);
-            console.debug(this.limiter.counts());
-
-            try {
-              const start = moment().unix();
-
-              const result = await Moralis.Web3API.token.getTokenPrice({
-                chain: chainId,
-                address: tokenAddress,
-              });
-
-              console.debug(`request time: ${moment().unix() - start}`);
-
-              return {
-                ...result,
-                chain_id: chainId,
-                token_address: tokenAddress,
-                block_number: undefined,
-              };
-            } catch (error) {
-              if (
-                error.code === 141 ||
-                error.message?.includes('No pools found with enough liquidity')
-              ) {
-                return undefined;
-              }
-              console.error(error);
-              throw error;
-            }
-          }),
-          {
-            onRetry: (error: any) => {
-              console.error(error);
-
-              return logger.warn(
-                `Retry due to ${error.message}: ${debugMessage}`,
-              );
-            },
-          },
-        ),
+    return this.handleCall(
       {
+        url,
         ttl: 1800,
+      },
+      async () => {
+        try {
+          const result = await Moralis.Web3API.token.getTokenPrice({
+            chain: chainId,
+            address: tokenAddress,
+          });
+
+          return {
+            ...result,
+            chain_id: chainId,
+            token_address: tokenAddress,
+            block_number: undefined,
+          };
+        } catch (error) {
+          if (
+            error.code === 141 ||
+            error.message?.includes('No pools found with enough liquidity')
+          ) {
+            return undefined;
+          }
+          throw error;
+        }
       },
     );
   }
@@ -168,44 +125,28 @@ export class MoralisService {
   ): Promise<NftTransferDto[]> {
     validate([chainId, tokenAddress, tokenId], ['string', 'string', 'string']);
 
-    const cacheKey = `moralis.nftTransfersOfTokenId['${chainId}']['${tokenAddress}'][${tokenId}]`;
-    const debugMessage = `Web3API > getWalletTokenIdTransfers('${chainId}', '${tokenAddress}', ${tokenId})`;
+    const url = `${BASE_URL}/nft/${tokenAddress}${tokenId}/transfers?chain=${chainId}`;
 
-    return this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(debugMessage);
-            console.debug(this.limiter.counts());
-
-            const response =
-              await Moralis.Web3API.token.getWalletTokenIdTransfers({
-                chain: chainId,
-                address: tokenAddress,
-                token_id: tokenId,
-              });
-
-            if (!Array.isArray(response?.result)) {
-              return [];
-            }
-
-            return response.result.map((it) => ({
-              ...it,
-              chain_id: chainId,
-            }));
-          }),
-          {
-            onRetry: (error) => {
-              console.error(error);
-              return logger.warn(
-                `Retry due to ${error.message}: ${debugMessage}`,
-              );
-            },
-          },
-        ),
+    return this.handleCall(
       {
-        ttl: 5,
+        url,
+        ttl: 300,
+      },
+      async () => {
+        const response = await Moralis.Web3API.token.getWalletTokenIdTransfers({
+          chain: chainId,
+          address: tokenAddress,
+          token_id: tokenId,
+        });
+
+        if (!Array.isArray(response?.result)) {
+          return [];
+        }
+
+        return response.result.map((it) => ({
+          ...it,
+          chain_id: chainId,
+        }));
       },
     );
   }
@@ -213,63 +154,42 @@ export class MoralisService {
   async tokenPriceOf(
     chainId: ChainId,
     tokenAddress: string,
-    blockNumber?: number,
+    blockNumber: number,
   ): Promise<ERC20PriceDto> {
     validate(
       [chainId, tokenAddress, blockNumber],
       ['string', 'string', 'number='],
     );
 
-    const cacheKey = `v3_moralis.tokenPriceOf['${chainId}']['${tokenAddress}'][${blockNumber}]`;
-    const debugMessage = `Web3API > getTokenPrice('${chainId}', '${tokenAddress}', ${blockNumber})`;
+    const url = `${BASE_URL}/erc20/${tokenAddress}/price?chain=${chainId}&to_block=${blockNumber}`;
 
-    return this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(debugMessage);
-            console.debug(this.limiter.counts());
+    return this.handleCall({ url, ttl: 0 }, async () => {
+      try {
+        const result = await Moralis.Web3API.token.getTokenPrice({
+          chain: chainId,
+          address: tokenAddress,
+          to_block: blockNumber,
+        });
 
-            try {
-              const result = await Moralis.Web3API.token.getTokenPrice({
-                chain: chainId,
-                address: tokenAddress,
-                to_block: blockNumber,
-              });
+        const erc20Price = {
+          ...result,
+          chain_id: chainId,
+          token_address: tokenAddress,
+          block_number: blockNumber,
+        };
 
-              const erc20Price = {
-                ...result,
-                chain_id: chainId,
-                token_address: tokenAddress,
-                block_number: blockNumber,
-              };
+        return erc20Price;
+      } catch (error) {
+        if (
+          error.code === 141 ||
+          error.message?.includes('No pools found with enough liquidity')
+        ) {
+          return undefined;
+        }
 
-              return erc20Price;
-            } catch (error) {
-              if (
-                error.code === 141 ||
-                error.message?.includes('No pools found with enough liquidity')
-              ) {
-                return undefined;
-              }
-
-              throw error;
-            }
-          }),
-          {
-            onRetry: (error) => {
-              console.error(error);
-              return logger.warn(
-                `Retry due to ${error.message}: ${debugMessage}`,
-              );
-            },
-          },
-        ),
-      {
-        ttl: !!blockNumber ? 0 : 3600,
-      },
-    );
+        throw error;
+      }
+    });
   }
 
   async tokenMetadataOf(
@@ -278,41 +198,24 @@ export class MoralisService {
   ): Promise<TokenMetadata> {
     validate([chainId, contractAddress], ['string', 'string']);
 
-    const cacheKey = `moralis.tokenMetadataOf__['${chainId}']['${contractAddress}']`;
-    const debugMessage = `Web3API > getTokenMetadata('${chainId}', '${contractAddress}')`;
+    const url = `${BASE_URL}/erc20/metadata?chain=${chainId}&addresses=${contractAddress}`;
 
-    return this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(debugMessage);
-            console.debug(this.limiter.counts());
+    return this.handleCall({ url, ttl: 0 }, async () => {
+      const result = await Moralis.Web3API.token.getTokenMetadata({
+        addresses: [contractAddress],
+        chain: chainId,
+      });
 
-            const result = await Moralis.Web3API.token.getTokenMetadata({
-              addresses: [contractAddress],
-              chain: chainId,
-            });
+      if (!Array.isArray(result) || result.length === 0) {
+        return undefined;
+      }
 
-            if (!Array.isArray(result) || result.length === 0) {
-              return undefined;
-            }
-
-            return <TokenMetadata>{
-              ...result[0],
-              decimals: Number(result[0].decimals),
-              chainId,
-            };
-          }),
-          {
-            onRetry: (error) =>
-              logger.warn(`Retry due to ${error.message}: ${debugMessage}`),
-          },
-        ),
-      {
-        ttl: 0,
-      },
-    );
+      return <TokenMetadata>{
+        ...result[0],
+        decimals: Number(result[0].decimals),
+        chainId,
+      };
+    });
   }
 
   async nativeBalanceOf(
@@ -321,34 +224,17 @@ export class MoralisService {
   ): Promise<string> {
     validate([chainId, ownerAddress], ['string', 'string']);
 
-    const cacheKey = `moralis.nativeBalance_['${chainId}']['${ownerAddress}']`;
-    const debugMessage = `Web3API > getNativeBalance('${chainId}', '${ownerAddress}')`;
+    const url = `${BASE_URL}/${ownerAddress}/balance?chain=${chainId}`;
 
-    return this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(debugMessage);
-            console.debug(this.limiter.counts());
+    return this.handleCall({ url, ttl: 60 }, async () => {
+      const result: NativeBalanceDto =
+        await Moralis.Web3API.account.getNativeBalance({
+          address: ownerAddress,
+          chain: chainId,
+        });
 
-            const result: NativeBalanceDto =
-              await Moralis.Web3API.account.getNativeBalance({
-                address: ownerAddress,
-                chain: chainId,
-              });
-
-            return result?.balance;
-          }),
-          {
-            onRetry: (error) =>
-              logger.warn(`Retry due to ${error.message}: ${debugMessage}`),
-          },
-        ),
-      {
-        ttl: 60,
-      },
-    );
+      return result?.balance;
+    });
   }
 
   async tokensOf(
@@ -358,37 +244,23 @@ export class MoralisService {
   ): Promise<TokenBalanceDto[]> {
     validate([chainId, ownerAddress], ['string', 'string']);
 
-    const cacheKey = `moralis.tokensByOwner_['${chainId}']['${ownerAddress}']`;
-    const debugMessage = `Web3API > getTokenBalances('${chainId}', '${ownerAddress}')`;
+    const url = `${BASE_URL}/${ownerAddress}/erc20?chain=${chainId}`;
 
-    const tokens: TokenBalanceDto[] = await this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(debugMessage);
-            console.debug(this.limiter.counts());
+    const tokens: TokenBalanceDto[] = await this.handleCall(
+      { url, ttl: 60 },
+      async () => {
+        const response = await Moralis.Web3API.account.getTokenBalances({
+          address: ownerAddress,
+          chain: chainId,
+        });
 
-            const response = await Moralis.Web3API.account.getTokenBalances({
-              address: ownerAddress,
-              chain: chainId,
-            });
-
-            return response?.map(
-              (token) =>
-                <TokenBalanceDto>{
-                  ...token,
-                  chain_id: chainId,
-                },
-            );
-          }),
-          {
-            onRetry: (error) =>
-              logger.warn(`Retry due to ${error.message}: ${debugMessage}`),
-          },
-        ),
-      {
-        ttl: 60,
+        return response?.map(
+          (token) =>
+            <TokenBalanceDto>{
+              ...token,
+              chain_id: chainId,
+            },
+        );
       },
     );
 
@@ -419,40 +291,21 @@ export class MoralisService {
   async nftsOf(chainId: ChainId, ownerAddress: string): Promise<NftOwnerDto[]> {
     validate([chainId, ownerAddress], ['string', 'string']);
 
-    const cacheKey = ` v3_moralis.nftsByOwner['${chainId}']['${ownerAddress}']`;
-    const debugMessage = `Web3API > getNFTs('${chainId}', '${ownerAddress}')`;
+    const url = `${BASE_URL}/${ownerAddress}/nft?chain=${chainId}`;
 
-    return this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(debugMessage);
-            console.debug(this.limiter.counts());
+    return this.handleCall({ url, ttl: 60 }, async () => {
+      const response = await Moralis.Web3API.account.getNFTs({
+        address: ownerAddress,
+        chain: chainId,
+      });
 
-            const response = await Moralis.Web3API.account.getNFTs({
-              address: ownerAddress,
-              chain: chainId,
-            });
-
-            return response?.result
-              ?.filter((it) => !['OPENSTORE'].includes(it.symbol))
-              .map((nft) => ({
-                ...nft,
-                chain_id: chainId,
-              }));
-          }),
-          {
-            onRetry: (error) => {
-              console.error(error);
-              logger.warn(`Retry due to ${error.message}: ${debugMessage}`);
-            },
-          },
-        ),
-      {
-        ttl: 60,
-      },
-    );
+      return response?.result
+        ?.filter((it) => !['OPENSTORE'].includes(it.symbol))
+        .map((nft) => ({
+          ...nft,
+          chain_id: chainId,
+        }));
+    });
   }
 
   async nftMetadataOf(
@@ -461,76 +314,47 @@ export class MoralisService {
   ): Promise<NftContractMetadataDto> {
     validate([chainId, contractAddress], ['string', 'string']);
 
-    const cacheKey = `moralis.metadata_['${chainId}']['${contractAddress}']`;
+    const url = `${BASE_URL}/nft/${contractAddress}/metadata?chain=${chainId}`;
 
-    const debugMessage = `Web3API > getNFTMetadata('${chainId}', '${contractAddress}')`;
+    return this.handleCall({ url, ttl: 3600 }, async () => {
+      const nftMetadata = await Moralis.Web3API.token.getNFTMetadata({
+        address: contractAddress,
+        chain: chainId,
+      });
 
-    return this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(debugMessage);
-            console.debug(this.limiter.counts());
-
-            const nftMetadata = await Moralis.Web3API.token.getNFTMetadata({
-              address: contractAddress,
-              chain: chainId,
-            });
-
-            return <NftContractMetadataDto>{
-              ...nftMetadata,
-              chain_id: chainId,
-            };
-          }),
-          {
-            onRetry: (error) =>
-              logger.warn(`Retry due to ${error.message}: ${debugMessage}`),
-          },
-        ),
-      { ttl: 3600 },
-    );
+      return <NftContractMetadataDto>{
+        ...nftMetadata,
+        chain_id: chainId,
+      };
+    });
   }
 
   async fetchTokenTransfers(
     chainId: ChainListDto,
     ownerAddress: string,
-    blockNumber = 0,
+    fromBlock = 0,
     offset = 0,
     limit = 500,
   ): Promise<TokenTransferDto[]> {
     validate([chainId, ownerAddress, offset], ['string', 'string', 'number']);
 
-    const debugMessage = `Web3API > getTokenTransfers('${chainId}', '${ownerAddress}', ${blockNumber}, ${offset}, ${limit})`;
+    const url = `${BASE_URL}/${ownerAddress}/erc20/transfers?chain=${chainId}&fromBlock=${fromBlock}&offset=${offset}&limit=${limit}`;
 
-    return retry(
-      this.limiter.wrap(async () => {
-        logger.debug(debugMessage);
-        console.debug(this.limiter.counts());
+    return this.handleCall({ url }, async () => {
+      const response = await Moralis.Web3API.account.getTokenTransfers({
+        address: ownerAddress,
+        chain: chainId,
+        from_block: fromBlock,
+        offset,
+        limit,
+      });
 
-        const response = await Moralis.Web3API.account.getTokenTransfers({
-          address: ownerAddress,
-          chain: chainId,
-          from_block: blockNumber,
-          offset,
-          limit,
-        });
+      if (!Array.isArray(response?.result)) {
+        return [];
+      }
 
-        if (!Array.isArray(response?.result)) {
-          return [];
-        }
-
-        return response.result.map((it) => ({ ...it, chain_id: chainId }));
-      }),
-      {
-        onRetry: (error: any) => {
-          console.error(error);
-          logger.warn(
-            `Retry due to ${error.message ?? error.error}: ${debugMessage}`,
-          );
-        },
-      },
-    );
+      return response.result.map((it) => ({ ...it, chain_id: chainId }));
+    });
   }
 
   async allTokenTransfersOf(
@@ -539,74 +363,55 @@ export class MoralisService {
   ): Promise<TokenTransferDto[]> {
     validate([chainId, ownerAddress], ['string', 'string']);
 
-    const transfers = [];
+    const url = `${BASE_URL}/${ownerAddress}/erc20/transfers?chain=${chainId}`;
 
-    const cacheKey = `moralis.allTokenTransfersOf_['${chainId}']['${ownerAddress}']`;
+    return this.handleCall({ url, ttl: 300 }, async () => {
+      const transfers = [];
 
-    return this.cacheService.wrap(
-      cacheKey,
-      async () => {
-        while (true) {
-          const nextTransfers = await this.fetchTokenTransfers(
-            chainId,
-            ownerAddress,
-            transfers.length,
-          );
+      while (true) {
+        const nextTransfers = await this.fetchTokenTransfers(
+          chainId,
+          ownerAddress,
+          transfers.length,
+        );
 
-          if (nextTransfers.length === 0) {
-            break;
-          }
-
-          transfers.push(...nextTransfers);
+        if (nextTransfers.length === 0) {
+          break;
         }
 
-        return transfers;
-      },
-      {
-        ttl: 300,
-      },
-    );
+        transfers.push(...nextTransfers);
+      }
+
+      return transfers;
+    });
   }
 
   async fetchTransactions(
     chainId: ChainListDto,
     ownerAddress: string,
-    blockNumber = 0,
+    fromBlock = 0,
     offset = 0,
     limit = 500,
   ): Promise<TransactionDto[]> {
     validate([chainId, ownerAddress, offset], ['string', 'string', 'number']);
 
-    const debugMessage = `Web3API > getTransactions('${chainId}', '${ownerAddress}', ${blockNumber}, ${offset}, ${limit})`;
+    const url = `${BASE_URL}/${ownerAddress}?chain=${chainId}&fromBlock=${fromBlock}&offset=${offset}&limit=${limit}`;
 
-    return retry(
-      this.limiter.wrap(async () => {
-        logger.debug(debugMessage);
-        console.debug(this.limiter.counts());
+    return this.handleCall({ url }, async () => {
+      const response = await Moralis.Web3API.account.getTransactions({
+        address: ownerAddress,
+        chain: chainId,
+        from_block: fromBlock,
+        offset,
+        limit,
+      });
 
-        const response = await Moralis.Web3API.account.getTransactions({
-          address: ownerAddress,
-          chain: chainId,
-          from_block: blockNumber,
-          offset,
-          limit,
-        });
+      if (!Array.isArray(response?.result)) {
+        return [];
+      }
 
-        if (!Array.isArray(response?.result)) {
-          return [];
-        }
-
-        return response.result.map((it) => ({ ...it, chain_id: chainId }));
-      }),
-      {
-        onRetry: (error: any) => {
-          console.error(error);
-          logger.warn(
-            `Retry due to ${error.message ?? error.error}: ${debugMessage}`,
-          );
-        },
-      },
-    );
+      return response.result.map((it) => ({ ...it, chain_id: chainId }));
+    });
   }
 
   async nftContractTransfersOf(
@@ -616,43 +421,21 @@ export class MoralisService {
   ): Promise<NftTransferDto[]> {
     validate([chainId, contractAddress, limit], ['string', 'string', 'number']);
 
-    const cacheKey = `moralis.nftContractTransfersOf__['${chainId}']['${contractAddress}'][${limit}]`;
-    const debugMessage = `Web3API > getContractNFTTransfers('${chainId}', '${contractAddress}', ${limit})`;
+    const url = `${BASE_URL}/nft/${contractAddress}/transfers?chain=${chainId}&limit=${limit}`;
 
-    return this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(debugMessage);
-            console.debug(this.limiter.counts());
+    return this.handleCall({ url, ttl: 1800 }, async () => {
+      const response = await Moralis.Web3API.token.getContractNFTTransfers({
+        address: contractAddress,
+        chain: chainId,
+        limit,
+      });
 
-            const response =
-              await Moralis.Web3API.token.getContractNFTTransfers({
-                address: contractAddress,
-                chain: chainId,
-                limit,
-              });
+      if (!Array.isArray(response?.result)) {
+        return [];
+      }
 
-            if (!Array.isArray(response?.result)) {
-              return [];
-            }
-
-            return response.result.map((it) => ({ ...it, chain_id: chainId }));
-          }),
-          {
-            onRetry: (error: any) => {
-              console.error(error);
-              logger.warn(
-                `Retry due to ${error.message ?? error.error}: ${debugMessage}`,
-              );
-            },
-          },
-        ),
-      {
-        ttl: 1800,
-      },
-    );
+      return response.result.map((it) => ({ ...it, chain_id: chainId }));
+    });
   }
 
   async nftTransfersOf(
@@ -661,45 +444,23 @@ export class MoralisService {
   ): Promise<NftTransferDto[]> {
     validate([chainId, ownerAddress], ['string', 'string']);
 
-    const cacheKey = `moralis.nftTransfersOf__['${chainId}']['${ownerAddress}']`;
-    const debugMessage = `Web3API > getNFTTransfers('${chainId}', '${ownerAddress}'`;
+    const url = `${BASE_URL}/${ownerAddress}/nft/transfers?chain=${chainId}`;
 
-    // // TODO: once moralis has fixed ERC20 contracts appearing in the NFT list, can remove this
-    const bannedContracts = ['0xe9e7cea3dedca5984780bafc599bd69add087d56'];
+    return this.handleCall({ url, ttl: 300 }, async () => {
+      // TODO: once moralis has fixed ERC20 contracts appearing in the NFT list, can remove this
+      const bannedContracts = ['0xe9e7cea3dedca5984780bafc599bd69add087d56'];
+      const response = await Moralis.Web3API.account.getNFTTransfers({
+        address: ownerAddress,
+        chain: chainId,
+      });
 
-    return this.cacheService.wrap(
-      cacheKey,
-      () =>
-        retry(
-          this.limiter.wrap(async () => {
-            logger.debug(debugMessage);
-            console.debug(this.limiter.counts());
+      if (!Array.isArray(response?.result)) {
+        return [];
+      }
 
-            const response = await Moralis.Web3API.account.getNFTTransfers({
-              address: ownerAddress,
-              chain: chainId,
-            });
-
-            if (!Array.isArray(response?.result)) {
-              return [];
-            }
-
-            return response.result
-              .filter((it) => !bannedContracts.includes(it.token_address))
-              .map((it) => ({ ...it, chain_id: chainId }));
-          }),
-          {
-            onRetry: (error: any) => {
-              console.error(error);
-              logger.warn(
-                `Retry due to ${error.message ?? error.error}: ${debugMessage}`,
-              );
-            },
-          },
-        ),
-      {
-        ttl: 300,
-      },
-    );
+      return response.result
+        .filter((it) => !bannedContracts.includes(it.token_address))
+        .map((it) => ({ ...it, chain_id: chainId }));
+    });
   }
 }

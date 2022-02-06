@@ -198,13 +198,13 @@ export class OpenseaService extends AbstractApiService {
       throw error;
     };
 
-    return this.wrapCall(
-      () => axios.get(url, { headers }).then(parse).catch(catchError),
+    return this.handleCall(
       {
-        cacheKey,
-        logDetail: url,
+        url,
         ttl,
       },
+
+      () => axios.get(url, { headers }).then(parse).catch(catchError),
     );
   }
 }

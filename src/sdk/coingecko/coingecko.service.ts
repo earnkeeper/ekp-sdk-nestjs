@@ -66,9 +66,12 @@ export class CoingeckoService extends AbstractApiService {
   async getImageUrl(coinId: string): Promise<string> {
     validate([coinId], ['string']);
     const url = `${BASE_URL}/coins/${coinId}`;
-    const cacheKey = `${url}_v1`;
 
-    return this.wrapCall(
+    return this.handleCall(
+      {
+        url,
+        ttl: 3600,
+      },
       async () => {
         try {
           const response = await axios.get(url);
@@ -86,11 +89,6 @@ export class CoingeckoService extends AbstractApiService {
           throw error;
         }
       },
-      {
-        cacheKey,
-        logDetail: url,
-        ttl: 3600,
-      },
     );
   }
 
@@ -106,9 +104,11 @@ export class CoingeckoService extends AbstractApiService {
     const url = `${BASE_URL}/coins/${coinId}/history?date=${dateMoment.format(
       'DD-MM-YYYY',
     )}`;
-    const cacheKey = `${url}_v8`;
-
-    return this.wrapCall(
+    return this.handleCall(
+      {
+        url,
+        ttl: 0,
+      },
       async () => {
         try {
           const response = await axios.get(url);
@@ -140,11 +140,6 @@ export class CoingeckoService extends AbstractApiService {
           throw error;
         }
       },
-      {
-        cacheKey,
-        logDetail: url,
-        ttl: 0,
-      },
     );
   }
 
@@ -156,7 +151,10 @@ export class CoingeckoService extends AbstractApiService {
   ): Promise<CoinPriceDto[]> {
     const url = `${BASE_URL}/coins/${coinId}/market_chart/range?vs_currency=${fiatId}&from=${from}&to=${to}`;
 
-    return this.wrapCall(
+    return this.handleCall(
+      {
+        url,
+      },
       async () => {
         const response = await getAndHandle(url, { allow404: true });
 
@@ -178,9 +176,6 @@ export class CoingeckoService extends AbstractApiService {
               },
           )
           .value();
-      },
-      {
-        logDetail: url,
       },
     );
   }
@@ -215,9 +210,12 @@ export class CoingeckoService extends AbstractApiService {
     validate([coinIds, fiatId], ['Array.<string>', 'string']);
 
     const url = `${BASE_URL}/simple/price?ids=${coinIds.join()}&vs_currencies=${fiatId}`;
-    const cacheKey = `${url}_v1`;
 
-    return this.wrapCall(
+    return this.handleCall(
+      {
+        url,
+        ttl: 60,
+      },
       async () => {
         const response = await axios.get(url);
 
@@ -234,7 +232,6 @@ export class CoingeckoService extends AbstractApiService {
           };
         });
       },
-      { cacheKey, logDetail: url, ttl: 60 },
     );
   }
 
@@ -242,9 +239,12 @@ export class CoingeckoService extends AbstractApiService {
 
   private async fetchGeckoCoins(): Promise<GeckoCoin[]> {
     const url = `${BASE_URL}/coins/list?include_platform=true`;
-    const cacheKey = 'coingecko.coins';
 
-    return this.wrapCall(
+    return this.handleCall(
+      {
+        url,
+        ttl: 3600,
+      },
       async () => {
         const response = await axios.get(url);
 
@@ -259,11 +259,6 @@ export class CoingeckoService extends AbstractApiService {
         }));
 
         return geckoCoins;
-      },
-      {
-        cacheKey,
-        logDetail: url,
-        ttl: 3600,
       },
     );
   }

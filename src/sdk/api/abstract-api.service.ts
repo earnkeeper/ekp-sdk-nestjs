@@ -4,6 +4,7 @@ import Bottleneck from 'bottleneck';
 import { CacheService } from '../cache/cache.service';
 import { EkConfigService } from '../config/ek-config.service';
 import { LimiterService } from '../limiter.service';
+import { SentryService } from '../sentry/sentry.service';
 import { logger } from '../util/default-logger';
 
 export interface AbstractApiOptions {
@@ -12,8 +13,7 @@ export interface AbstractApiOptions {
 }
 
 export interface CallWrapperOptions {
-  readonly cacheKey?: string;
-  readonly logDetail?: string;
+  readonly url: string;
   readonly ttl?: number;
 }
 
@@ -25,6 +25,8 @@ export class AbstractApiService {
   protected limiterService: LimiterService;
   @Inject()
   protected configService: EkConfigService;
+  @Inject()
+  protected sentryService: SentryService;
 
   constructor(private options: AbstractApiOptions) {}
 
@@ -34,12 +36,14 @@ export class AbstractApiService {
     }
   }
 
-  protected async wrapCall<T>(
+  protected async handleCall<T>(
+    options: CallWrapperOptions,
     call: () => Promise<T>,
-    options?: CallWrapperOptions,
   ): Promise<T> {
-    if (!!options.cacheKey) {
-      const cachedValue = await this.cacheService.get<T>(options.cacheKey);
+    const cacheKey = `v1_${options.url}`;
+
+    if (options.ttl !== undefined) {
+      const cachedValue = await this.cacheService.get<T>(cacheKey);
       if (cachedValue !== null) {
         return cachedValue;
       }
@@ -48,19 +52,22 @@ export class AbstractApiService {
     return retry<T>(
       async () => {
         const wrappedCall = async () => {
-          if (!!options.logDetail) {
-            logger.debug(`${options.logDetail}`);
-          }
+          logger.debug(`${options.url}`);
+
+          const transaction = this.sentryService.startTransaction({
+            op: options.url,
+            name: options.url,
+          });
 
           const result = await call();
 
-          if (!!options.cacheKey) {
-            const cacheOptions = !!options.ttl
-              ? { ttl: options.ttl }
-              : undefined;
-
-            await this.cacheService.set(options.cacheKey, result, cacheOptions);
+          if (options.ttl !== undefined) {
+            await this.cacheService.set(cacheKey, result, {
+              ttl: options.ttl,
+            });
           }
+
+          transaction.finish();
           return result;
         };
 
@@ -77,8 +84,8 @@ export class AbstractApiService {
   }
 
   protected handleRetryError(error: any, options: CallWrapperOptions) {
-    if (!!options.logDetail) {
-      logger.warn(`Retry due to ${error.message}: ${options?.logDetail}`);
+    if (!!options.url) {
+      logger.warn(`Retry due to ${error.message}: ${options?.url}`);
 
       // TODO: find a better way to log error objects rather than console.error
       if (error.isAxiosError) {
@@ -94,6 +101,7 @@ export class AbstractApiService {
       } else {
         console.error(error);
       }
+      this.sentryService.captureError(error);
     }
   }
 
