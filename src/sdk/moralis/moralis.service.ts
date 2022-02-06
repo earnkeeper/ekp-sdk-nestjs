@@ -137,9 +137,7 @@ export class MoralisService {
             } catch (error) {
               if (
                 error.code === 141 ||
-                error.message?.includes(
-                  'No pools found with enough liquidity, to calculate the price',
-                )
+                error.message?.includes('No pools found with enough liquidity')
               ) {
                 return undefined;
               }
@@ -249,7 +247,10 @@ export class MoralisService {
 
               return erc20Price;
             } catch (error) {
-              if (error.code === 141) {
+              if (
+                error.code === 141 ||
+                error.message?.includes('No pools found with enough liquidity')
+              ) {
                 return undefined;
               }
 
