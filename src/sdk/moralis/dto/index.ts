@@ -35,3 +35,7 @@ export type TransactionCollectionDto =
 export type TokenTransferDto = components['schemas']['erc20Transaction'] & {
   chain_id: string;
 };
+
+export type TradeDto = components['schemas']['trade'] & {
+  chain_id: string;
+};

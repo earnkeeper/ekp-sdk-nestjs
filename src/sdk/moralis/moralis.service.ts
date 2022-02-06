@@ -18,8 +18,11 @@ import {
   NftTransferDto,
   TokenBalanceDto,
   TokenTransferDto,
+  TradeDto,
   TransactionDto,
 } from './dto';
+
+const BASE_URL = 'https://deep-index.moralis.io/api/v2';
 
 @Injectable()
 export class MoralisService {
@@ -39,10 +42,64 @@ export class MoralisService {
       serverUrl: this.configService.moralisServerUrl,
       appId: this.configService.moralisAppId,
     });
+
     logger.log('Moralis service initialized');
   }
 
   private limiter: Bottleneck;
+
+  async lowestPriceOfNft(
+    chainId: ChainId,
+    contractAddress: string,
+    days: number,
+  ): Promise<TradeDto> {
+    const url = `${BASE_URL}/nft/${contractAddress}/lowestprice?chain=${chainId}&days=${days}`;
+    const cacheKey = `v1_${url}`;
+
+    return this.cacheService.wrap(
+      cacheKey,
+      () =>
+        retry(
+          this.limiter.wrap(async () => {
+            logger.debug(url);
+            console.debug(this.limiter.counts());
+
+            try {
+              const start = moment().unix();
+
+              const result = await Moralis.Web3API.token.getNFTLowestPrice({
+                chain: chainId,
+                days,
+                address: contractAddress,
+              });
+
+              console.debug(`request time: ${moment().unix() - start}`);
+
+              return {
+                ...result,
+                chain_id: chainId,
+              };
+            } catch (error) {
+              if (error.message === 'Could not get NFT lower Price') {
+                return undefined;
+              }
+              console.error(error);
+              throw error;
+            }
+          }),
+          {
+            onRetry: (error: any) => {
+              console.error(error);
+
+              return logger.warn(`Retry due to ${error.message}: ${url}`);
+            },
+          },
+        ),
+      {
+        ttl: 1800,
+      },
+    );
+  }
 
   async latestTokenPriceOf(
     chainId: ChainId,
@@ -78,7 +135,12 @@ export class MoralisService {
                 block_number: undefined,
               };
             } catch (error) {
-              if (error.code === 141) {
+              if (
+                error.code === 141 ||
+                error.message?.includes(
+                  'No pools found with enough liquidity, to calculate the price',
+                )
+              ) {
                 return undefined;
               }
               console.error(error);
@@ -356,7 +418,7 @@ export class MoralisService {
   async nftsOf(chainId: ChainId, ownerAddress: string): Promise<NftOwnerDto[]> {
     validate([chainId, ownerAddress], ['string', 'string']);
 
-    const cacheKey = `moralis.nftsByOwner_['${chainId}']['${ownerAddress}']`;
+    const cacheKey = ` v3_moralis.nftsByOwner['${chainId}']['${ownerAddress}']`;
     const debugMessage = `Web3API > getNFTs('${chainId}', '${ownerAddress}')`;
 
     return this.cacheService.wrap(
@@ -380,8 +442,10 @@ export class MoralisService {
               }));
           }),
           {
-            onRetry: (error) =>
-              logger.warn(`Retry due to ${error.message}: ${debugMessage}`),
+            onRetry: (error) => {
+              console.error(error);
+              logger.warn(`Retry due to ${error.message}: ${debugMessage}`);
+            },
           },
         ),
       {

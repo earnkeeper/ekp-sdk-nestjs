@@ -48,7 +48,7 @@
     "lodash": "^4.17.21",
     "moment": "^2.29.1",
     "mongoose": "^6.1.2",
-    "moralis": "0.0.184",
+    "moralis": "1.2.6",
     "nestjs-redis": "git+https://github.com/earnkeeper/nestjs-redis#f699937",
     "pg": "^8.7.1",
     "reflect-metadata": "^0.1.13",
