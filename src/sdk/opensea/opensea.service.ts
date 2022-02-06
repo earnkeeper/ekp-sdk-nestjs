@@ -128,23 +128,16 @@ export class OpenseaService extends AbstractApiService {
     validate([contractAddress], ['string']);
 
     const url = `${BASE_URL}/asset_contract/${contractAddress}`;
-    const cacheKey = `${url}_v2`;
 
-    return this.get(
-      url,
-      cacheKey,
-      30,
-      (response) => response?.data?.collection,
-    );
+    return this.get(url, 30, (response) => response?.data?.collection);
   }
 
   // TODO: add an interface for this return type
   assetOf(tokenAddress: string, tokenId: string): Promise<any> {
     validate([tokenAddress, tokenId], ['string', 'string']);
     const url = `${BASE_URL}/asset/${tokenAddress}/${tokenId}`;
-    const cacheKey = `${url}_v2`;
 
-    return this.get(url, cacheKey, 30, (response) => response?.data);
+    return this.get(url, 30, (response) => response?.data);
   }
 
   async eventsOf(
@@ -178,14 +171,13 @@ export class OpenseaService extends AbstractApiService {
   ): Promise<AssetEventDto[]> {
     const url = `${BASE_URL}/events?asset_contract_address=${tokenAddress}&only_opensea=false&limit=${limit}&offset=${offset}&occurred_after=${occurredAfter}`;
 
-    return this.get(url, undefined, undefined, (response) => {
+    return this.get(url, undefined, (response) => {
       return response?.data?.asset_events ?? [];
     });
   }
 
   private get<T>(
     url: string,
-    cacheKey: string,
     ttl: number,
     parse: (response: AxiosResponse) => T,
   ) {

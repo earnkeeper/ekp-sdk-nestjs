@@ -14,6 +14,7 @@ import { OpenseaService, OPENSEA_QUEUE } from './opensea/opensea.service';
 import { AssetEvent, AssetEventSchema } from './opensea/schema';
 import { PriceService } from './price/price.service';
 import { FiatPrice, FiatPriceSchema } from './price/schema';
+import { SentryService } from './sentry/sentry.service';
 import {
   TokenTransfer,
   TokenTransferSchema,
@@ -47,6 +48,7 @@ import { TransactionService } from './transaction/transaction.service';
     MoralisService,
     OpenseaService,
     PriceService,
+    SentryService,
     TransactionService,
   ],
   exports: [
@@ -59,6 +61,7 @@ import { TransactionService } from './transaction/transaction.service';
     MoralisService,
     OpenseaService,
     PriceService,
+    SentryService,
     TransactionService,
   ],
 })
