@@ -44,7 +44,7 @@ export class AbstractApiService {
 
     if (options.ttl !== undefined) {
       const cachedValue = await this.cacheService.get<T>(cacheKey);
-      if (cachedValue !== null) {
+      if (cachedValue !== null && cachedValue !== undefined) {
         return cachedValue;
       }
     }

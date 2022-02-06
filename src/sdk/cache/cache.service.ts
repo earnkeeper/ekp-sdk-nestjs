@@ -19,11 +19,7 @@ export class CacheService {
     if (cached === undefined || cached === null) {
       const result = await fn();
 
-      if (result === undefined || result === null) {
-        await this.set(cacheKey, 'unknown', config);
-      } else {
-        await this.set(cacheKey, result, config);
-      }
+      await this.set(cacheKey, result, config);
 
       return result;
     } else {
@@ -35,8 +31,12 @@ export class CacheService {
     return this.cache.get(key);
   }
 
-  set<T>(key: string, value: T, options?: CachingConfig): Promise<T> {
-    return this.cache.set(key, value, options);
+  set<T>(key: string, value: T, options?: CachingConfig): Promise<any> {
+    if (value === undefined || value === null) {
+      return this.cache.set(key, 'unknown', options);
+    } else {
+      return this.cache.set(key, value, options);
+    }
   }
 
   del(key: string): Promise<any> {
