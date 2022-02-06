@@ -6,7 +6,7 @@ export type ChainListDto = components['schemas']['chainList'];
 export type ERC20PriceDto = components['schemas']['erc20Price'] & {
   chain_id: ChainId;
   token_address: string;
-  block_number: string;
+  block_number: number;
 };
 
 export type NativeBalanceDto = components['schemas']['nativeBalance'];

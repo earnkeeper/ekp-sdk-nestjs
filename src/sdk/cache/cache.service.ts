@@ -1,12 +1,34 @@
 import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
-import { Cache, CachingConfig, WrapArgsType } from 'cache-manager';
+import { Cache, CachingConfig } from 'cache-manager';
 
 @Injectable()
 export class CacheService {
   constructor(@Inject(CACHE_MANAGER) private cache: Cache) {}
 
-  wrap<T>(...args: WrapArgsType<T>[]): Promise<T> {
-    return this.cache.wrap(...args);
+  async wrap<T>(
+    cacheKey: string,
+    fn: () => Promise<T>,
+    config?: CachingConfig,
+  ): Promise<T> {
+    const cached = await this.get<T>(cacheKey);
+
+    if (cached === 'undefined') {
+      return undefined;
+    }
+
+    if (cached === undefined || cached === null) {
+      const result = await fn();
+
+      if (result === undefined || result === null) {
+        await this.set(cacheKey, 'undefined', config);
+      } else {
+        await this.set(cacheKey, result, config);
+      }
+
+      return result;
+    } else {
+      return cached;
+    }
   }
 
   get<T>(key: string): Promise<T | undefined> {

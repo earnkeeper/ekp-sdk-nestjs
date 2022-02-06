@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import retry from 'async-retry';
 import axios from 'axios';
+import Bottleneck from 'bottleneck';
 import { validate } from 'bycontract';
 import _ from 'lodash';
 import moment from 'moment';
 import { AbstractApiService } from '../api/abstract-api.service';
+import { LimiterService } from '../limiter.service';
 import { ChainId, chains, logger } from '../util';
-import { CoinPrice as CoinPriceDto } from './model/coin-price';
 import { getAndHandle } from '../util/axios';
+import { CoinPrice as CoinPriceDto } from './model/coin-price';
 const BASE_URL = 'https://api.coingecko.com/api/v3';
 
 interface GeckoCoin {
@@ -18,7 +19,9 @@ interface GeckoCoin {
 
 @Injectable()
 export class CoingeckoService extends AbstractApiService {
-  constructor() {
+  private fetchAllCoinsMutex: Bottleneck;
+
+  constructor(limiterService: LimiterService) {
     super({
       name: 'CoingeckoService',
       limit: {
@@ -29,6 +32,20 @@ export class CoingeckoService extends AbstractApiService {
         reservoirRefreshInterval: 60000,
       },
     });
+
+    this.fetchAllCoinsMutex = limiterService.createMutex(
+      `${CoingeckoService.name}-fetchallcoins`,
+    );
+  }
+
+  async onModuleInit() {
+    super.onModuleInit();
+
+    await this.fetchAllCoinsMutex.schedule(async () => {
+      this.allCoins = await this.fetchGeckoCoins();
+    });
+
+    logger.log('Coingecko service initialized');
   }
 
   private platforms = {
@@ -222,12 +239,6 @@ export class CoingeckoService extends AbstractApiService {
   }
 
   private allCoins: GeckoCoin[];
-
-  async onModuleInit() {
-    super.onModuleInit();
-    this.allCoins = await this.fetchGeckoCoins();
-    logger.log('Coingecko service initialized');
-  }
 
   private async fetchGeckoCoins(): Promise<GeckoCoin[]> {
     const url = `${BASE_URL}/coins/list?include_platform=true`;

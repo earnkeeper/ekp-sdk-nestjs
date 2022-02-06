@@ -50,7 +50,7 @@ export class MoralisService {
   ): Promise<ERC20PriceDto> {
     validate([chainId, tokenAddress], ['string', 'string']);
 
-    const cacheKey = `moralis.latestTokenPriceOf_['${chainId}']['${tokenAddress}']`;
+    const cacheKey = `v3_moralis.latestTokenPriceOf['${chainId}']['${tokenAddress}']`;
     const debugMessage = `Web3API > getTokenPrice('${chainId}', '${tokenAddress}')`;
 
     return this.cacheService.wrap(
@@ -71,12 +71,17 @@ export class MoralisService {
 
               console.debug(`request time: ${moment().unix() - start}`);
 
-              return result;
+              return {
+                ...result,
+                chain_id: chainId,
+                token_address: tokenAddress,
+                block_number: undefined,
+              };
             } catch (error) {
               if (error.code === 141) {
-                return null;
+                return undefined;
               }
-
+              console.error(error);
               throw error;
             }
           }),
@@ -183,11 +188,7 @@ export class MoralisService {
               return erc20Price;
             } catch (error) {
               if (error.code === 141) {
-                return {
-                  chain_id: chainId,
-                  token_address: tokenAddress,
-                  block_number: blockNumber,
-                };
+                return undefined;
               }
 
               throw error;
@@ -352,10 +353,7 @@ export class MoralisService {
     return tokens;
   }
 
-  async nftsOf(
-    chainId: ChainListDto,
-    ownerAddress: string,
-  ): Promise<NftOwnerDto[]> {
+  async nftsOf(chainId: ChainId, ownerAddress: string): Promise<NftOwnerDto[]> {
     validate([chainId, ownerAddress], ['string', 'string']);
 
     const cacheKey = `moralis.nftsByOwner_['${chainId}']['${ownerAddress}']`;
@@ -547,7 +545,7 @@ export class MoralisService {
   }
 
   async nftContractTransfersOf(
-    chainId: ChainListDto,
+    chainId: ChainId,
     contractAddress: string,
     limit = 500,
   ): Promise<NftTransferDto[]> {
@@ -593,7 +591,7 @@ export class MoralisService {
   }
 
   async nftTransfersOf(
-    chainId: ChainListDto,
+    chainId: ChainId,
     ownerAddress: string,
   ): Promise<NftTransferDto[]> {
     validate([chainId, ownerAddress], ['string', 'string']);

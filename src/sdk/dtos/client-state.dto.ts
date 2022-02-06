@@ -6,6 +6,6 @@ export interface ClientStateDto {
     readonly path: string;
     readonly hiddenChains: string[];
     readonly selectedCurrency: CurrencyDto;
-    readonly watchedWallets: { address: string }[];
+    readonly watchedWallets: { address: string; hidden: boolean }[];
   };
 }
