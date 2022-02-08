@@ -4,9 +4,9 @@ import { ethers } from 'ethers';
 import _ from 'lodash';
 import moment from 'moment';
 import { Model } from 'mongoose';
-import { ChainId } from '..';
 import { TokenTransferDto, TransactionDto } from '../moralis/dto';
 import { MoralisService } from '../moralis/moralis.service';
+import { ChainId } from '../util/chain';
 import { TokenTransfer, Transaction } from './schema';
 
 @Injectable()
@@ -19,7 +19,10 @@ export class TransactionService {
     public tokenTransferModel: Model<TokenTransfer>,
   ) {}
 
-  async tokenTransfersOf(chainId: string, address: string) {
+  async tokenTransfersOf(
+    chainId: string,
+    address: string,
+  ): Promise<TokenTransfer[]> {
     const existingModels = await this.tokenTransferModel
       .find({ ownerChain: chainId, ownerAddress: address })
       .exec();
@@ -54,14 +57,8 @@ export class TransactionService {
         this.mapMoralisTokenTransfer(tx, chainId, address),
       );
 
-      newModels.push(...nextModels);
-
-      offset += nextTxs.length;
-    }
-
-    if (newModels.length > 0) {
       await this.tokenTransferModel.bulkWrite(
-        newModels.map((model) => ({
+        nextModels.map((model) => ({
           updateOne: {
             filter: { id: model.id },
             update: { $set: model },
@@ -70,10 +67,76 @@ export class TransactionService {
         })),
       );
 
-      return _.sortBy([existingModels, ...newModels], 'blockNumber');
+      newModels.push(...nextModels);
+
+      offset += nextTxs.length;
     }
 
-    return existingModels;
+    if (newModels.length > 0) {
+      return _.sortBy([...existingModels, ...newModels], 'blockNumber');
+    }
+
+    return _.sortBy(existingModels, 'blockNumber');
+  }
+
+  async contractTokenTransfersOf(
+    chainId: string,
+    address: string,
+  ): Promise<TokenTransfer[]> {
+    const existingModels = await this.tokenTransferModel
+      .find({ ownerChain: chainId, ownerAddress: address })
+      .exec();
+
+    let startBlock: number;
+
+    if (existingModels.length > 0) {
+      startBlock =
+        _.chain(existingModels)
+          .map((it) => it.blockNumber)
+          .max()
+          .value() + 1;
+    }
+
+    const newModels = [];
+
+    let offset = 0;
+
+    while (true) {
+      const nextTxs = await this.moralisService.fetchContractTokenTransfers(
+        chainId as ChainId,
+        address,
+        startBlock,
+        offset,
+      );
+
+      if (nextTxs.length === 0) {
+        break;
+      }
+
+      const nextModels = nextTxs.map((tx) =>
+        this.mapMoralisTokenTransfer(tx, chainId, address),
+      );
+
+      await this.tokenTransferModel.bulkWrite(
+        nextModels.map((model) => ({
+          updateOne: {
+            filter: { id: model.id },
+            update: { $set: model },
+            upsert: true,
+          },
+        })),
+      );
+
+      newModels.push(...nextModels);
+
+      offset += nextTxs.length;
+    }
+
+    if (newModels.length > 0) {
+      return _.sortBy([...existingModels, ...newModels], 'blockNumber');
+    }
+
+    return _.sortBy(existingModels, 'blockNumber');
   }
 
   async transactionsOf(

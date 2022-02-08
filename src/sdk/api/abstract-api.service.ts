@@ -67,7 +67,7 @@ export class AbstractApiService {
             });
           }
 
-          transaction.finish();
+          transaction?.finish();
           return result;
         };
 

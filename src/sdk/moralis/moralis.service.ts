@@ -356,7 +356,36 @@ export class MoralisService extends AbstractApiService {
       return response.result.map((it) => ({ ...it, chain_id: chainId }));
     });
   }
+  async fetchContractTokenTransfers(
+    chainId: ChainListDto,
+    contractAddress: string,
+    fromBlock = 0,
+    offset = 0,
+    limit = 500,
+  ): Promise<TokenTransferDto[]> {
+    validate(
+      [chainId, contractAddress, offset],
+      ['string', 'string', 'number'],
+    );
 
+    const url = `${BASE_URL}/erc20/${contractAddress}/transfers?chain=${chainId}&fromBlock=${fromBlock}&offset=${offset}&limit=${limit}`;
+
+    return this.handleCall({ url }, async () => {
+      const response = await Moralis.Web3API.token.getTokenAddressTransfers({
+        address: contractAddress,
+        chain: chainId,
+        from_block: fromBlock,
+        offset,
+        limit,
+      });
+
+      if (!Array.isArray(response?.result)) {
+        return [];
+      }
+
+      return response.result.map((it) => ({ ...it, chain_id: chainId }));
+    });
+  }
   async allTokenTransfersOf(
     chainId: ChainListDto,
     ownerAddress: string,
