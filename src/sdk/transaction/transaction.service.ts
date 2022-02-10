@@ -7,12 +7,14 @@ import { Model } from 'mongoose';
 import { TokenTransferDto, TransactionDto } from '../moralis/dto';
 import { MoralisService } from '../moralis/moralis.service';
 import { ChainId } from '../util/chain';
-import { TokenTransfer, Transaction } from './schema';
+import { TokenTransfer, Transaction, TransactionLog } from './schema';
 
 @Injectable()
 export class TransactionService {
   constructor(
     private moralisService: MoralisService,
+    @InjectModel(TransactionLog.name)
+    public transactionLogModel: Model<TransactionLog>,
     @InjectModel(Transaction.name)
     public transactionModel: Model<Transaction>,
     @InjectModel(TokenTransfer.name)

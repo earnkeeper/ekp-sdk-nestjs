@@ -2,7 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import * as cluster from 'cluster';
 import * as os from 'os';
 
-export async function runCluster(socketApp: any, workerApp: any) {
+export async function runCluster(
+  socketApp: any,
+  workerApp: any,
+  maxWorkers = 16,
+) {
   const bootstrap = async () => {
     if (cluster.default.isPrimary) {
       const app = await NestFactory.create(socketApp);
@@ -15,7 +19,7 @@ export async function runCluster(socketApp: any, workerApp: any) {
     }
   };
 
-  Cluster.register(16, bootstrap);
+  Cluster.register(maxWorkers, bootstrap);
 }
 
 class Cluster {

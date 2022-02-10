@@ -19,6 +19,8 @@ import {
   TokenTransfer,
   TokenTransferSchema,
   Transaction,
+  TransactionLog,
+  TransactionLogSchema,
   TransactionSchema,
 } from './transaction/schema';
 import { TransactionService } from './transaction/transaction.service';
@@ -31,9 +33,10 @@ import { TransactionService } from './transaction/transaction.service';
     MongooseModule.forRootAsync({ useClass: EkConfigService }),
     MongooseModule.forFeature([
       { name: AssetEvent.name, schema: AssetEventSchema },
-      { name: Transaction.name, schema: TransactionSchema },
-      { name: TokenTransfer.name, schema: TokenTransferSchema },
       { name: FiatPrice.name, schema: FiatPriceSchema },
+      { name: TokenTransfer.name, schema: TokenTransferSchema },
+      { name: Transaction.name, schema: TransactionSchema },
+      { name: TransactionLog.name, schema: TransactionLogSchema },
     ]),
     RedisModule.forRootAsync(EkConfigService.createRedisAsyncOptions()),
     BullModule.registerQueue({ name: OPENSEA_QUEUE }),

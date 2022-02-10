@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { validate } from 'bycontract';
 import Moralis from 'moralis/node';
+import { BehaviorSubject, filter, firstValueFrom } from 'rxjs';
 import { AbstractApiService } from '../api/abstract-api.service';
 import { ChainId, chains, logger } from '../util';
 import { TokenMetadata } from '../util/chain/models/TokenMetadata';
@@ -21,6 +22,16 @@ const BASE_URL = 'https://deep-index.moralis.io/api/v2';
 
 @Injectable()
 export class MoralisService extends AbstractApiService {
+  private _ready = new BehaviorSubject<boolean>(false);
+
+  get ready() {
+    return this._ready.value;
+  }
+
+  waitForReady(): Promise<boolean> {
+    return firstValueFrom(this._ready.pipe(filter((it) => it)));
+  }
+
   constructor() {
     super({
       name: MoralisService.name,
@@ -33,12 +44,16 @@ export class MoralisService extends AbstractApiService {
 
   async onModuleInit() {
     try {
+      this._ready.next(false);
       await Moralis.start({
         serverUrl: this.configService.moralisServerUrl,
         appId: this.configService.moralisAppId,
+        masterKey: this.configService.moralisMasterKey,
       });
 
       logger.log('Moralis service initialized');
+
+      this._ready.next(true);
     } catch (error) {
       this.sentryService.captureError(error);
       throw error;

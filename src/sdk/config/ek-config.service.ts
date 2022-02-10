@@ -27,6 +27,7 @@ export class EkConfigService
     this.pluginName = this.required('EKP_PLUGIN_NAME');
     this.moralisServerUrl = this.required('MORALIS_SERVER_URL');
     this.moralisAppId = this.required('MORALIS_APP_ID');
+    this.moralisMasterKey = this.optional('MORALIS_MASTER_KEY');
     this.mongoHost = this.optional('MONGO_HOST');
     this.redisHost = this.optional('REDIS_HOST');
     this.mongoPort = this.optional('MONGO_PORT', 27017);
@@ -47,6 +48,7 @@ export class EkConfigService
   readonly pluginName: string;
   readonly moralisServerUrl: string;
   readonly moralisAppId: string;
+  readonly moralisMasterKey: string;
   readonly mongoHost: string;
   readonly mongoPort: number;
   readonly mongoUser: string;
