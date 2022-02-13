@@ -29,5 +29,6 @@ export class TransactionLog {
   topic2: string;
 }
 
-export const TransactionLogSchema =
-  SchemaFactory.createForClass(TransactionLog);
+export const TransactionLogSchema = SchemaFactory.createForClass(
+  TransactionLog,
+).index({ ownerChain: 1, address: 1, topic0: 1 });

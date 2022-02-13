@@ -30,7 +30,6 @@ import { TransactionService } from './transaction/transaction.service';
     EkConfigModule,
     CacheModule.registerAsync({ useClass: EkConfigService }),
     BullModule.forRootAsync({ useClass: EkConfigService }),
-    MongooseModule.forRootAsync({ useClass: EkConfigService }),
     MongooseModule.forFeature([
       { name: AssetEvent.name, schema: AssetEventSchema },
       { name: FiatPrice.name, schema: FiatPriceSchema },
