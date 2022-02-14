@@ -11,6 +11,6 @@ export * from './moralis';
 export * from './opensea';
 export * from './price';
 export * from './sdk.module';
-export * from './sentry';
+export * from './apm';
 export * from './transaction';
 export * from './util';

@@ -5,7 +5,7 @@ import { EkConfigService } from '../config/ek-config.service';
 import { logger } from '../util/default-logger';
 
 @Injectable()
-export class SentryService {
+export class ApmService {
   constructor(private configService: EkConfigService) {
     if (configService.sentryEnabled) {
       Sentry.init({
@@ -13,7 +13,7 @@ export class SentryService {
         tracesSampleRate: 1.0,
       });
     } else {
-      logger.warn('No DSN configured, sentry service disabled');
+      logger.warn('No DSN configured, apm service disabled');
     }
   }
 

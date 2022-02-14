@@ -9,7 +9,7 @@ export function path(type) {
 }
 
 export function collection(type) {
-  return type.name;
+  return `${process.env.EKP_PLUGIN_ID}_${type.name}`;
 }
 
 export function filterPath(event: ClientStateChangedEvent, path: string) {

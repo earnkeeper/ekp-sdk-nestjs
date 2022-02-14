@@ -55,7 +55,7 @@ export class MoralisService extends AbstractApiService {
 
       this._ready.next(true);
     } catch (error) {
-      this.sentryService.captureError(error);
+      this.apmService.captureError(error);
       throw error;
     }
   }

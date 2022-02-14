@@ -1,10 +1,10 @@
 import { Inject } from '@nestjs/common';
 import retry from 'async-retry';
 import Bottleneck from 'bottleneck';
+import { ApmService } from '../apm/apm.service';
 import { CacheService } from '../cache/cache.service';
 import { EkConfigService } from '../config/ek-config.service';
 import { LimiterService } from '../limiter.service';
-import { SentryService } from '../sentry/sentry.service';
 import { logger } from '../util/default-logger';
 
 export interface AbstractApiOptions {
@@ -26,7 +26,7 @@ export class AbstractApiService {
   @Inject()
   protected configService: EkConfigService;
   @Inject()
-  protected sentryService: SentryService;
+  protected apmService: ApmService;
 
   constructor(private options: AbstractApiOptions) {}
 
@@ -54,7 +54,7 @@ export class AbstractApiService {
         const wrappedCall = async () => {
           logger.debug(`${options.url}`);
 
-          const transaction = this.sentryService.startTransaction({
+          const transaction = this.apmService.startTransaction({
             op: options.url,
             name: options.url,
           });
@@ -101,7 +101,7 @@ export class AbstractApiService {
       } else {
         console.error(error);
       }
-      this.sentryService.captureError(error);
+      this.apmService.captureError(error);
     }
   }
 
