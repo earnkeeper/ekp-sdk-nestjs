@@ -1,5 +1,5 @@
+import { ChainId } from '@earnkeeper/ekp-sdk';
 import { components } from 'moralis/types/generated/web3Api';
-import { ChainId } from '../../util';
 
 export type ChainListDto = components['schemas']['chainList'];
 

@@ -1,3 +1,4 @@
+import { ChainId } from '@earnkeeper/ekp-sdk';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ethers } from 'ethers';
@@ -6,7 +7,6 @@ import moment from 'moment';
 import { Model } from 'mongoose';
 import { TokenTransferDto, TransactionDto } from '../moralis/dto';
 import { MoralisService } from '../moralis/moralis.service';
-import { ChainId } from '../util/chain';
 import { TokenTransfer, Transaction, TransactionLog } from './schema';
 
 @Injectable()

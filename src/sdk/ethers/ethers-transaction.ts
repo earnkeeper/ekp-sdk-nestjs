@@ -1,5 +1,5 @@
+import { ChainId } from '@earnkeeper/ekp-sdk';
 import { ethers } from 'ethers';
-import { ChainId } from '../util';
 
 export interface EthersTransaction
   extends Omit<

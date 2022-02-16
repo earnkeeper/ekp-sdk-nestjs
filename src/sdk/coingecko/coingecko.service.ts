@@ -1,3 +1,4 @@
+import { ChainId, chains } from '@earnkeeper/ekp-sdk';
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import Bottleneck from 'bottleneck';
@@ -6,7 +7,7 @@ import _ from 'lodash';
 import moment from 'moment';
 import { AbstractApiService } from '../api/abstract-api.service';
 import { LimiterService } from '../limiter.service';
-import { ChainId, chains, logger } from '../util';
+import { logger } from '../util';
 import { getAndHandle } from '../util/axios';
 import { CoinPrice as CoinPriceDto } from './model/coin-price';
 const BASE_URL = 'https://api.coingecko.com/api/v3';

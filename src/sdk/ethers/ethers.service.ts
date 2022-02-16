@@ -1,10 +1,11 @@
+import { bignumber } from '@earnkeeper/ekp-sdk';
 import { Injectable } from '@nestjs/common';
 import retry from 'async-retry';
 import { validate } from 'bycontract';
 import { ethers } from 'ethers';
 import { CacheService } from '../cache/cache.service';
 import { LimiterService } from '../limiter.service';
-import { logger, safeBigNumberFrom } from '../util';
+import { logger } from '../util';
 import { EthersTransaction } from './ethers-transaction';
 
 @Injectable()
@@ -156,16 +157,16 @@ export class EthersService {
     // TODO: is there a better way to solve the deserialization error that forced this?
     return {
       ...result,
-      gasLimit: safeBigNumberFrom(result.gasLimit),
-      gasPrice: safeBigNumberFrom(result.gasPrice),
-      maxPriorityFeePerGas: safeBigNumberFrom(result.maxPriorityFeePerGas),
-      maxFeePerGas: safeBigNumberFrom(result.maxFeePerGas),
-      value: safeBigNumberFrom(result.value),
+      gasLimit: bignumber.safeFrom(result.gasLimit),
+      gasPrice: bignumber.safeFrom(result.gasPrice),
+      maxPriorityFeePerGas: bignumber.safeFrom(result.maxPriorityFeePerGas),
+      maxFeePerGas: bignumber.safeFrom(result.maxFeePerGas),
+      value: bignumber.safeFrom(result.value),
       receipt: {
         ...result.receipt,
-        cumulativeGasUsed: safeBigNumberFrom(result.receipt.cumulativeGasUsed),
-        effectiveGasPrice: safeBigNumberFrom(result.receipt.effectiveGasPrice),
-        gasUsed: safeBigNumberFrom(result.receipt.gasUsed),
+        cumulativeGasUsed: bignumber.safeFrom(result.receipt.cumulativeGasUsed),
+        effectiveGasPrice: bignumber.safeFrom(result.receipt.effectiveGasPrice),
+        gasUsed: bignumber.safeFrom(result.receipt.gasUsed),
       },
     };
   }

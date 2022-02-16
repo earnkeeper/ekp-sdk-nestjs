@@ -1,3 +1,15 @@
+import {
+  AddLayersEvent,
+  ADD_LAYERS,
+  ClientStateChangedEvent,
+  CLIENT_CONNECTED,
+  CLIENT_DISCONNECTED,
+  CLIENT_STATE_CHANGED,
+  LayerDto,
+  RemoveLayersEvent,
+  REMOVE_LAYERS,
+  UPDATE_METADATA,
+} from '@earnkeeper/ekp-sdk';
 import { InjectQueue } from '@nestjs/bull';
 import {
   SubscribeMessage,
@@ -11,18 +23,6 @@ import moment from 'moment';
 import { RedisService } from 'nestjs-redis';
 import { Server, Socket } from 'socket.io';
 import { EkConfigService } from '../sdk/config';
-import { LayerDto } from '../sdk/dtos';
-import {
-  AddLayersEvent,
-  ADD_LAYERS,
-  ClientStateChangedEvent,
-  CLIENT_CONNECTED,
-  CLIENT_DISCONNECTED,
-  CLIENT_STATE_CHANGED,
-  RemoveLayersEvent,
-  REMOVE_LAYERS,
-  UPDATE_METADATA,
-} from '../sdk/events';
 import { CLIENT_EVENT_QUEUE, logger } from '../sdk/util';
 
 @WebSocketGateway({ cors: true })

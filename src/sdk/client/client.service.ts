@@ -1,3 +1,14 @@
+import {
+  ADD_LAYERS,
+  ClientDisconnectedEvent,
+  ClientStateChangedEvent,
+  CLIENT_DISCONNECTED,
+  CLIENT_STATE_CHANGED,
+  DocumentDto,
+  LayerDto,
+  LayerQueryDto,
+  REMOVE_LAYERS,
+} from '@earnkeeper/ekp-sdk';
 import { Process, Processor } from '@nestjs/bull';
 import { InjectModel } from '@nestjs/mongoose';
 import { Job } from 'bull';
@@ -6,15 +17,6 @@ import moment from 'moment';
 import { Model } from 'mongoose';
 import { RedisService } from 'nestjs-redis';
 import { Observable, Subject } from 'rxjs';
-import { EkDocument, LayerDto, LayerQueryDto } from '../dtos';
-import {
-  ADD_LAYERS,
-  ClientDisconnectedEvent,
-  ClientStateChangedEvent,
-  CLIENT_DISCONNECTED,
-  CLIENT_STATE_CHANGED,
-  REMOVE_LAYERS,
-} from '../events';
 import { CLIENT_EVENT_QUEUE } from '../util';
 import { ClientState, ClientStateDocument } from './schemas';
 
@@ -96,7 +98,7 @@ export class ClientService {
   async emitDocuments(
     clientEvent: ClientStateChangedEvent,
     collectionName: string,
-    documents: EkDocument[],
+    documents: DocumentDto[],
   ) {
     return this.addLayers(clientEvent.clientId, [
       {

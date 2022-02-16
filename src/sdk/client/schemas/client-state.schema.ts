@@ -1,6 +1,6 @@
+import { ClientStateDto } from '@earnkeeper/ekp-sdk';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { ClientStateDto } from '../../dtos';
 
 export type ClientStateDocument = ClientState & Document;
 

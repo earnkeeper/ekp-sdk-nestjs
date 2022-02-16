@@ -1,10 +1,10 @@
+import { ChainId } from '@earnkeeper/ekp-sdk';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import _ from 'lodash';
 import moment from 'moment';
 import { Model } from 'mongoose';
 import { CoingeckoService } from '../coingecko/coingecko.service';
-import { ChainId } from '../util';
 import { FiatPrice } from './schema';
 
 @Injectable()

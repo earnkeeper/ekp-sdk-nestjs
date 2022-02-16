@@ -1,10 +1,10 @@
+import { ChainId, chains, TokenMetadata } from '@earnkeeper/ekp-sdk';
 import { Injectable } from '@nestjs/common';
 import { validate } from 'bycontract';
 import Moralis from 'moralis/node';
 import { BehaviorSubject, filter, firstValueFrom } from 'rxjs';
 import { AbstractApiService } from '../api/abstract-api.service';
-import { ChainId, chains, logger } from '../util';
-import { TokenMetadata } from '../util/chain/models/TokenMetadata';
+import { logger } from '../util';
 import {
   ChainListDto,
   ERC20PriceDto,
