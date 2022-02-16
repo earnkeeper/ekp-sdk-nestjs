@@ -2,20 +2,24 @@ import { NestFactory } from '@nestjs/core';
 import * as cluster from 'cluster';
 import * as os from 'os';
 
-export async function runCluster(primaryModule: any, workerModule: any) {
+export async function runCluster(
+  socketApp: any,
+  workerApp: any,
+  maxWorkers = 16,
+) {
   const bootstrap = async () => {
     if (cluster.default.isPrimary) {
-      const app = await NestFactory.create(primaryModule, { logger: false });
+      const app = await NestFactory.create(socketApp);
 
       await app.listen(3001);
     } else {
-      const app = await NestFactory.create(workerModule, { logger: false });
+      const app = await NestFactory.create(workerApp);
 
       await app.init();
     }
   };
 
-  Cluster.register(16, bootstrap);
+  Cluster.register(maxWorkers, bootstrap);
 }
 
 class Cluster {
@@ -47,7 +51,6 @@ class Cluster {
         console.log(`Worker ${worker.process.pid} died. Restarting`);
         cluster.default.fork();
       });
-
     }
     callback();
   }

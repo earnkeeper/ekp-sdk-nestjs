@@ -83,3 +83,7 @@ clear-values.yaml
 # Nest.js
 dist
 .env
+
+# Yalc
+.yalc
+yalc.lock

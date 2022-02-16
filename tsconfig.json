@@ -19,19 +19,5 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
-    "paths": {
-      "@app/sdk": [
-        "libs/sdk/src"
-      ],
-      "@app/sdk/*": [
-        "libs/sdk/src/*"
-      ],
-      "@app/etherscan": [
-        "libs/etherscan/src"
-      ],
-      "@app/etherscan/*": [
-        "libs/etherscan/src/*"
-      ]
-    }
   }
 }

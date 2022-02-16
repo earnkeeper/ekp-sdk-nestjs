@@ -1,0 +1,1 @@
+export const CLIENT_EVENT_QUEUE = 'CLIENT_EVENT_QUEUE';
