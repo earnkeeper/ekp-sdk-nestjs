@@ -1,18 +1,22 @@
 import { INestApplication } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
 import _ from 'lodash';
 import moment from 'moment';
-import { SocketApp } from '../src';
-import { PriceService } from '../src/sdk/price/price.service';
-import { SdkModule } from '../src/sdk/sdk.module';
+import { EkConfigService, PriceService, SdkModule, SocketApp } from '../src';
 
 describe(SocketApp.name, () => {
   let app: INestApplication;
   let priceService: PriceService;
 
+  jest.setTimeout(30000);
+
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [SdkModule],
+      imports: [
+        MongooseModule.forRootAsync({ useClass: EkConfigService }),
+        SdkModule,
+      ],
     }).compile();
 
     app = moduleRef.createNestApplication();

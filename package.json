@@ -24,7 +24,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --watch"
   },
   "dependencies": {
-    "@earnkeeper/ekp-sdk": "file:.yalc/@earnkeeper/ekp-sdk",
+    "@earnkeeper/ekp-sdk": "0.2.1",
     "@nestjs/bull": "^0.4.2",
     "@nestjs/common": "^8.2.5",
     "@nestjs/config": "^1.1.6",

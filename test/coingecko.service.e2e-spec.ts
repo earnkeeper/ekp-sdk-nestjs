@@ -1,10 +1,14 @@
 import { INestApplication } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
 import _ from 'lodash';
 import moment from 'moment';
-import { SocketApp } from '../src';
-import { CoingeckoService } from '../src/sdk/coingecko/coingecko.service';
-import { SdkModule } from '../src/sdk/sdk.module';
+import {
+  CoingeckoService,
+  EkConfigService,
+  SdkModule,
+  SocketApp,
+} from '../src';
 
 describe(SocketApp.name, () => {
   let app: INestApplication;
@@ -12,7 +16,10 @@ describe(SocketApp.name, () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [SdkModule],
+      imports: [
+        MongooseModule.forRootAsync({ useClass: EkConfigService }),
+        SdkModule,
+      ],
     }).compile();
 
     app = moduleRef.createNestApplication();

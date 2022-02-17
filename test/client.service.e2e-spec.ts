@@ -1,13 +1,17 @@
+import {
+  ClientStateChangedEvent,
+  ClientStateDto,
+  CLIENT_STATE_CHANGED,
+} from '@earnkeeper/ekp-sdk';
 import { getQueueToken } from '@nestjs/bull';
 import { INestApplication } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
 import { Queue } from 'bull';
 import {
   ClientService,
-  ClientStateChangedEvent,
-  ClientStateDto,
   CLIENT_EVENT_QUEUE,
-  CLIENT_STATE_CHANGED,
+  EkConfigService,
   SdkModule,
 } from '../src';
 
@@ -30,7 +34,10 @@ describe(ClientService.name, () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [SdkModule],
+      imports: [
+        MongooseModule.forRootAsync({ useClass: EkConfigService }),
+        SdkModule,
+      ],
     }).compile();
 
     app = moduleRef.createNestApplication();

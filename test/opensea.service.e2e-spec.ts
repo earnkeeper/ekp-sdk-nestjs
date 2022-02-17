@@ -1,10 +1,11 @@
 import { getQueueToken } from '@nestjs/bull';
 import { INestApplication } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
 import { Queue } from 'bull';
 import _ from 'lodash';
 import moment from 'moment';
-import { OpenseaService, SdkModule } from '../src';
+import { EkConfigService, OpenseaService, SdkModule } from '../src';
 import { OPENSEA_QUEUE } from '../src/sdk/opensea/opensea.service';
 
 const CONTRACT_ADDRESS = '0x47f75e8dd28df8d6e7c39ccda47026b0dca99043';
@@ -18,7 +19,10 @@ describe(OpenseaService.name, () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [SdkModule],
+      imports: [
+        MongooseModule.forRootAsync({ useClass: EkConfigService }),
+        SdkModule,
+      ],
     }).compile();
 
     app = moduleRef.createNestApplication();

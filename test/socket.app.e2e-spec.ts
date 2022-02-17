@@ -1,10 +1,11 @@
+import { ClientStateDto } from '@earnkeeper/ekp-sdk';
 import { getQueueToken } from '@nestjs/bull';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Queue } from 'bull';
 import moment from 'moment';
-import { ClientStateDto, CLIENT_EVENT_QUEUE, SocketApp } from '../src';
 import { SocketService } from '../src/socket/socket.service';
+import { CLIENT_EVENT_QUEUE, SocketApp } from '../src';
 
 describe(SocketApp.name, () => {
   let app: INestApplication;
