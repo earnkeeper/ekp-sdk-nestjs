@@ -48,6 +48,7 @@
     "mongoose": "^6.1.2",
     "moralis": "1.2.6",
     "nestjs-redis": "git+https://github.com/earnkeeper/nestjs-redis#f699937",
+    "redis-semaphore": "^4.1.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.4.0",
     "threads": "^1.7.0",

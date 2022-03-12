@@ -1,1 +1,1 @@
-export const CLIENT_EVENT_QUEUE = 'CLIENT_EVENT_QUEUE';
+export const WORKER_QUEUE = 'WORKER_QUEUE';

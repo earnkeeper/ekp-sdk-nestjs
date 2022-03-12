@@ -23,14 +23,14 @@ import moment from 'moment';
 import { RedisService } from 'nestjs-redis';
 import { Server, Socket } from 'socket.io';
 import { EkConfigService } from '../sdk/config';
-import { CLIENT_EVENT_QUEUE, logger } from '../sdk/util';
+import { WORKER_QUEUE, logger } from '../sdk/util';
 
 @WebSocketGateway({ cors: true })
 export class SocketService {
   private subscribeClient: Redis;
 
   constructor(
-    @InjectQueue(CLIENT_EVENT_QUEUE) private clientEventQueue: Queue,
+    @InjectQueue(WORKER_QUEUE) private clientEventQueue: Queue,
     private configService: EkConfigService,
     redisService: RedisService,
   ) {

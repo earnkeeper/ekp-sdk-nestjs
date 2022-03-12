@@ -1,15 +1,15 @@
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import { Job, Queue } from 'bull';
 import { validate } from 'bycontract';
 import moment from 'moment';
-import { Model } from 'mongoose';
 import * as Rx from 'rxjs';
 import { Observable } from 'rxjs';
 import { AbstractApiService } from '../api/abstract-api.service';
+import { AssetEventRepository } from './asset-event.repository';
 import { AssetContractDto, AssetEventDto } from './dto';
+import { AssetEventPollDto } from './dto/asset-event-poll.dto';
 import { AssetEvent } from './schema';
 
 const BASE_URL = 'https://api.opensea.io/api/v1';
@@ -20,27 +20,9 @@ const EVENTS_JOB = 'EVENTS_JOB';
 @Injectable()
 @Processor(OPENSEA_QUEUE)
 export class OpenseaService extends AbstractApiService {
-  get apiKey() {
-    return this.configService.openseaApiKey;
-  }
-
-  // TODO: create an interface for this
-  private assetPollsSubject = new Rx.Subject<{
-    contractAddress: string;
-    events: AssetEventDto[];
-  }>();
-
-  get assetPolls$() {
-    return this.assetPollsSubject as Observable<{
-      contractAddress: string;
-      events: AssetEventDto[];
-    }>;
-  }
-
   constructor(
     @InjectQueue(OPENSEA_QUEUE) private queue: Queue,
-    @InjectModel(AssetEvent.name)
-    public assetEventModel: Model<AssetEvent>,
+    private assetEventRepository: AssetEventRepository,
   ) {
     super({
       name: 'OpenseaService',
@@ -48,65 +30,93 @@ export class OpenseaService extends AbstractApiService {
     });
   }
 
-  async syncAssetEvents(tokenAddress: string): Promise<Job<any>> {
+  get apiKey() {
+    return this.configService.openseaApiKey;
+  }
+
+  private assetPollsSubject = new Rx.Subject<AssetEventPollDto>();
+
+  get assetPolls$() {
+    return this.assetPollsSubject as Observable<AssetEventPollDto>;
+  }
+
+  async syncAssetEventsByContractAddress(
+    contractAddress: string,
+  ): Promise<Job<any>> {
     return this.queue.add(
       EVENTS_JOB,
-      { tokenAddress, startAt: moment().subtract(1, 'day').unix() },
+      { contractAddress, startAt: moment().subtract(7, 'days').unix() },
       {
         repeat: { every: 30000 },
-        jobId: `opensea-events-${tokenAddress}`,
+        jobId: `opensea-events-${contractAddress}`,
+      },
+    );
+  }
+
+  async syncAssetEventsBySlug(slug: string): Promise<Job<any>> {
+    return this.queue.add(
+      EVENTS_JOB,
+      { slug, startAt: moment().subtract(7, 'days').unix() },
+      {
+        repeat: { every: 30000 },
+        jobId: `opensea-events-${slug}`,
       },
     );
   }
 
   @Process(EVENTS_JOB)
   async processEventsJob(job: Partial<Job<any>>) {
-    const { tokenAddress, startAt } = job.data;
+    const { contractAddress, slug, startAt } = job.data;
 
-    const maxFromDatabase = await this.assetEventModel
-      .where({
-        contractAddress: tokenAddress,
-      })
-      .sort('-createdDate')
-      .limit(1)
-      .exec();
+    let latestDbEvent: AssetEvent;
 
-    const occuredAfter = maxFromDatabase[0]?.createdDate ?? startAt;
+    if (!!contractAddress) {
+      latestDbEvent =
+        await this.assetEventRepository.findLatestByContractAddress(
+          contractAddress,
+        );
+    } else {
+      latestDbEvent = await this.assetEventRepository.findLatestBySlug(slug);
+    }
+
+    const occuredAfter = latestDbEvent?.createdDate ?? startAt;
 
     const maxPages = 100;
     const pageSize = 100;
     const allEvents = [];
 
     for (let page = 0; page < maxPages; page++) {
-      const nextEvents = await this.fetchEvents(
-        tokenAddress,
-        occuredAfter,
-        pageSize,
-        page * pageSize,
-      );
+      let nextEvents: AssetEventDto[] = [];
+
+      if (!!contractAddress) {
+        nextEvents = await this.fetchEventsByContractAddress(
+          contractAddress,
+          occuredAfter,
+          pageSize,
+          page * pageSize,
+        );
+      } else if (!!slug) {
+        nextEvents = await this.fetchEventsBySlug(
+          slug,
+          occuredAfter,
+          pageSize,
+          page * pageSize,
+        );
+      }
 
       if (nextEvents.length === 0) {
         break;
       }
 
-      await this.assetEventModel.bulkWrite(
-        nextEvents.map((newEvent) => {
-          const event: AssetEvent = {
-            id: newEvent.id,
-            contractAddress: tokenAddress,
-            createdDate: moment(`${newEvent.created_date}Z`).unix(),
-            eventType: newEvent.event_type,
-            details: newEvent,
-          };
-
-          return {
-            updateOne: {
-              filter: { id: event.id },
-              update: { $set: event },
-              upsert: true,
-            },
-          };
-        }),
+      await this.assetEventRepository.save(
+        nextEvents.map((newEvent) => ({
+          id: newEvent.id,
+          contractAddress,
+          createdDate: moment(`${newEvent.created_date}Z`).unix(),
+          details: newEvent,
+          eventType: newEvent.event_type,
+          slug,
+        })),
       );
 
       allEvents.push(...nextEvents);
@@ -118,7 +128,7 @@ export class OpenseaService extends AbstractApiService {
 
     if (allEvents.length > 0) {
       this.assetPollsSubject.next({
-        contractAddress: tokenAddress,
+        contractAddress: contractAddress,
         events: allEvents,
       });
     }
@@ -140,36 +150,26 @@ export class OpenseaService extends AbstractApiService {
     return this.get(url, 30, (response) => response?.data);
   }
 
-  async eventsOf(
-    tokenAddress: string,
-    occurredAfter: number,
-    eventTypes?: string[],
-  ): Promise<AssetEventDto[]> {
-    const query: any = {
-      contractAddress: tokenAddress,
-      createdDate: {
-        $gte: occurredAfter,
-      },
-    };
-
-    if (!!eventTypes) {
-      query.eventType = {
-        $in: eventTypes,
-      };
-    }
-
-    const events = await this.assetEventModel.find(query).exec();
-
-    return events.map((event) => event.details);
-  }
-
-  fetchEvents(
+  fetchEventsByContractAddress(
     tokenAddress: string,
     occurredAfter: number,
     limit: number,
     offset: number,
   ): Promise<AssetEventDto[]> {
     const url = `${BASE_URL}/events?asset_contract_address=${tokenAddress}&only_opensea=false&limit=${limit}&offset=${offset}&occurred_after=${occurredAfter}`;
+
+    return this.get(url, undefined, (response) => {
+      return response?.data?.asset_events ?? [];
+    });
+  }
+
+  fetchEventsBySlug(
+    slug: string,
+    occurredAfter: number,
+    limit: number,
+    offset: number,
+  ): Promise<AssetEventDto[]> {
+    const url = `${BASE_URL}/events?collection_slug=${slug}&only_opensea=false&limit=${limit}&offset=${offset}&occurred_after=${occurredAfter}`;
 
     return this.get(url, undefined, (response) => {
       return response?.data?.asset_events ?? [];

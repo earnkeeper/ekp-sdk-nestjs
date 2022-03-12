@@ -1,10 +1,10 @@
 import { ChainId, chains } from '@earnkeeper/ekp-sdk';
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
-import Bottleneck from 'bottleneck';
 import { validate } from 'bycontract';
 import _ from 'lodash';
 import moment from 'moment';
+import { Mutex } from 'redis-semaphore';
 import { AbstractApiService } from '../api/abstract-api.service';
 import { LimiterService } from '../limiter.service';
 import { logger } from '../util';
@@ -20,7 +20,7 @@ interface GeckoCoin {
 
 @Injectable()
 export class CoingeckoService extends AbstractApiService {
-  private fetchAllCoinsMutex: Bottleneck;
+  private fetchAllCoinsMutex: Mutex;
 
   constructor(limiterService: LimiterService) {
     super({
@@ -42,9 +42,21 @@ export class CoingeckoService extends AbstractApiService {
   async onModuleInit() {
     super.onModuleInit();
 
-    await this.fetchAllCoinsMutex.schedule(async () => {
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    if (this.fetchAllCoinsMutex.isAcquired) {
+      return;
+    }
+
+    try {
+      await this.fetchAllCoinsMutex.acquire();
+
       this.allCoins = await this.fetchGeckoCoins();
-    });
+    } finally {
+      await this.fetchAllCoinsMutex.release();
+    }
 
     logger.log('Coingecko service initialized');
   }

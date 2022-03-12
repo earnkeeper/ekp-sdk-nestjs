@@ -1,35 +1,35 @@
 import { AssetDto } from './asset.dto';
+import { AssetContractDto } from './asset-contract.dto';
 
-// TODO: add more fields here
-export interface AssetEventDto {
-  readonly asset: AssetDto;
-  readonly contract_address: string;
-  readonly created_date: string;
-  readonly duration: string;
-  readonly ending_price: string;
-  readonly starting_price: string;
-  readonly listing_time: string;
-  readonly from_account: {
-    readonly address: string;
-  };
-  readonly seller: {
-    readonly address: string;
-  };
-  readonly is_private: boolean;
-  readonly payment_token: {
-    readonly id: number;
-    readonly symbol: string;
-    readonly address: string;
-    readonly image_url: string;
-    readonly name: string;
-    readonly decimals: number;
-    readonly eth_price: string;
-    readonly usd_price: string;
-  };
-  readonly id: number;
-  readonly quantity: string;
-  readonly to_account?: {
-    readonly address: string;
-  };
-  readonly event_type: string;
-}
+export type AssetEventDto = Readonly<{
+  asset: AssetDto;
+  contract_address: string;
+  created_date: string;
+  duration: string;
+  ending_price: string;
+  event_type: string;
+  from_account: Readonly<{
+    address: string;
+  }>;
+  id: number;
+  is_private: boolean;
+  listing_time: string;
+  payment_token: Readonly<{
+    id: number;
+    symbol: string;
+    address: string;
+    image_url: string;
+    name: string;
+    decimals: number;
+    eth_price: string;
+    usd_price: string;
+  }>;
+  quantity: string;
+  seller: Readonly<{
+    address: string;
+  }>;
+  starting_price: string;
+  to_account?: Readonly<{
+    address: string;
+  }>;
+}>;

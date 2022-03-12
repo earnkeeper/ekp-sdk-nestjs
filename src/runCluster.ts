@@ -10,11 +10,11 @@ export async function runCluster(
   const bootstrap = async () => {
     if (cluster.default.isPrimary) {
       const app = await NestFactory.create(socketApp);
-
+      app.enableShutdownHooks();
       await app.listen(3001);
     } else {
       const app = await NestFactory.create(workerApp);
-
+      app.enableShutdownHooks();
       await app.init();
     }
   };

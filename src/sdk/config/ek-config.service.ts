@@ -70,14 +70,22 @@ export class EkConfigService
       useFactory: (configService: EkConfigService) => {
         return [
           {
+            name: 'DEFAULT_CLIENT',
+            host: configService.redisHost,
+            port: configService.redisPort,
+            keepAlive: 30000,
+          },
+          {
             name: 'PUBLISH_CLIENT',
             host: configService.redisHost,
             port: configService.redisPort,
+            keepAlive: 30000,
           },
           {
             name: 'SUBSCRIBE_CLIENT',
             host: configService.redisHost,
             port: configService.redisPort,
+            keepAlive: 30000,
           },
         ];
       },

@@ -1,8 +1,11 @@
-export interface AssetDto {
-  readonly id: number;
-  readonly token_id: string;
-  readonly image_url: string;
-  readonly name: string;
-  readonly permalink: string;
-  readonly token_metadata: string;
-}
+import { AssetContractDto } from "./asset-contract.dto";
+
+export type AssetDto = Readonly<{
+  asset_contract?: AssetContractDto;
+  id: number;
+  image_url: string;
+  name: string;
+  permalink: string;
+  token_id: string;
+  token_metadata: string;
+}>

@@ -5,7 +5,7 @@ import { Test } from '@nestjs/testing';
 import { Queue } from 'bull';
 import moment from 'moment';
 import { SocketService } from '../src/socket/socket.service';
-import { CLIENT_EVENT_QUEUE, SocketApp } from '../src';
+import { WORKER_QUEUE, SocketApp } from '../src';
 
 describe(SocketApp.name, () => {
   let app: INestApplication;
@@ -31,7 +31,7 @@ describe(SocketApp.name, () => {
     app = moduleRef.createNestApplication();
 
     await app.init();
-    clientEventQueue = app.get(getQueueToken(CLIENT_EVENT_QUEUE));
+    clientEventQueue = app.get(getQueueToken(WORKER_QUEUE));
     socketService = app.get(SocketService);
     await clientEventQueue.empty();
   });

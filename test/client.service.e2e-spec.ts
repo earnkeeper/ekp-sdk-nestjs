@@ -10,7 +10,7 @@ import { Test } from '@nestjs/testing';
 import { Queue } from 'bull';
 import {
   ClientService,
-  CLIENT_EVENT_QUEUE,
+  WORKER_QUEUE,
   EkConfigService,
   SdkModule,
 } from '../src';
@@ -43,7 +43,7 @@ describe(ClientService.name, () => {
     app = moduleRef.createNestApplication();
 
     await app.init();
-    clientEventQueue = app.get(getQueueToken(CLIENT_EVENT_QUEUE));
+    clientEventQueue = app.get(getQueueToken(WORKER_QUEUE));
     clientService = app.get(ClientService);
     await clientEventQueue.empty();
   });

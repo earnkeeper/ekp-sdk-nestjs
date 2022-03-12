@@ -43,8 +43,15 @@ export class MoralisService extends AbstractApiService {
   }
 
   async onModuleInit() {
+    super.onModuleInit();
+
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
     try {
       this._ready.next(false);
+
       await Moralis.start({
         serverUrl: this.configService.moralisServerUrl,
         appId: this.configService.moralisAppId,
