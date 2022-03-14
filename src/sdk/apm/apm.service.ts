@@ -13,6 +13,7 @@ export class ApmService {
         dsn: configService.sentryDsn,
         tracesSampleRate: 1.0,
         environment: configService.environment,
+        release: `${process.env.npm_package_version}+${process.env.COMMIT_HASH}`,
       });
     } else {
       logger.warn('No DSN configured, apm service disabled');
