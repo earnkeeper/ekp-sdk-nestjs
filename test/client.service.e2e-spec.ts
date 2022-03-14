@@ -10,9 +10,9 @@ import { Test } from '@nestjs/testing';
 import { Queue } from 'bull';
 import {
   ClientService,
-  WORKER_QUEUE,
   EkConfigService,
   SdkModule,
+  WORKER_QUEUE,
 } from '../src';
 
 describe(ClientService.name, () => {
@@ -56,10 +56,16 @@ describe(ClientService.name, () => {
     clientService.clientStateEvents$.subscribe((it) => (received = it));
     expect(received).toBeUndefined();
 
-    const job = await clientEventQueue.add(CLIENT_STATE_CHANGED, {
-      clientId: 'test',
-      state: clientStateDtoFixture,
-    });
+    const job = await clientEventQueue.add(
+      CLIENT_STATE_CHANGED,
+      {
+        clientId: 'test',
+        state: clientStateDtoFixture,
+      },
+      {
+        removeOnComplete: true,
+      },
+    );
 
     await job.finished();
 

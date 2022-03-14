@@ -23,7 +23,7 @@ import moment from 'moment';
 import { RedisService } from 'nestjs-redis';
 import { Server, Socket } from 'socket.io';
 import { EkConfigService } from '../sdk/config';
-import { WORKER_QUEUE, logger } from '../sdk/util';
+import { logger, WORKER_QUEUE } from '../sdk/util';
 
 @WebSocketGateway({ cors: true })
 export class SocketService {
@@ -51,17 +51,29 @@ export class SocketService {
       }),
     );
 
-    this.clientEventQueue.add(CLIENT_CONNECTED, {
-      clientId: socket.id,
-    });
+    this.clientEventQueue.add(
+      CLIENT_CONNECTED,
+      {
+        clientId: socket.id,
+      },
+      {
+        removeOnComplete: true,
+      },
+    );
   }
 
   handleDisconnect(socket: Socket) {
     logger.log(`Client disconnected: ${socket.id}`);
 
-    this.clientEventQueue.add(CLIENT_DISCONNECTED, {
-      clientId: socket.id,
-    });
+    this.clientEventQueue.add(
+      CLIENT_DISCONNECTED,
+      {
+        clientId: socket.id,
+      },
+      {
+        removeOnComplete: true,
+      },
+    );
   }
 
   @SubscribeMessage(CLIENT_STATE_CHANGED)
@@ -76,7 +88,9 @@ export class SocketService {
   }
 
   async queueClientStateChangedEvent(event: ClientStateChangedEvent) {
-    await this.clientEventQueue.add(CLIENT_STATE_CHANGED, event);
+    await this.clientEventQueue.add(CLIENT_STATE_CHANGED, event, {
+      removeOnComplete: true,
+    });
   }
 
   emitAddLayers(addLayersEvent: AddLayersEvent) {

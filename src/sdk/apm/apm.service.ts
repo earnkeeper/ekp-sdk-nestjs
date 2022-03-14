@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as Sentry from '@sentry/node';
+import '@sentry/tracing';
 import { TransactionContext } from '@sentry/types';
 import { EkConfigService } from '../config/ek-config.service';
 import { logger } from '../util/default-logger';
