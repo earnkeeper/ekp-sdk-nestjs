@@ -12,6 +12,7 @@ export class ApmService {
       Sentry.init({
         dsn: configService.sentryDsn,
         tracesSampleRate: 1.0,
+        environment: configService.environment,
       });
     } else {
       logger.warn('No DSN configured, apm service disabled');

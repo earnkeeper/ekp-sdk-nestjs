@@ -28,8 +28,8 @@ export class EkConfigService
     this.moralisServerUrl = this.optional('MORALIS_SERVER_URL');
     this.moralisAppId = this.optional('MORALIS_APP_ID');
     this.moralisMasterKey = this.optional('MORALIS_MASTER_KEY');
-    this.mongoHost = this.optional('MONGO_HOST');
-    this.redisHost = this.optional('REDIS_HOST');
+    this.mongoHost = this.optional('MONGO_HOST', 'localhost');
+    this.redisHost = this.optional('REDIS_HOST', 'localhost');
     this.mongoPort = this.optional('MONGO_PORT', 27017);
     this.redisPort = this.optional('REDIS_PORT', 6379);
     this.mongoUser = this.optional('MONGO_USER', undefined);
@@ -42,10 +42,12 @@ export class EkConfigService
     this.redisPassword = this.optional('REDIS_PASSWORD', undefined);
     this.openseaApiKey = this.optional('OPENSEA_API_KEY', undefined);
     this.sentryDsn = this.optional('SENTRY_DSN', undefined);
+    this.environment = this.optional('NODE_ENV', 'production');
   }
 
   readonly pluginId: string;
   readonly pluginName: string;
+  readonly environment: string;
   readonly moralisServerUrl: string;
   readonly moralisAppId: string;
   readonly moralisMasterKey: string;
