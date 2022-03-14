@@ -17,7 +17,7 @@ export interface CallWrapperOptions {
   readonly ttl?: number;
 }
 
-export class AbstractApiService {
+export abstract class AbstractApiService {
   protected limiter: Bottleneck;
   @Inject()
   protected cacheService: CacheService;
