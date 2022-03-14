@@ -54,11 +54,6 @@ export class AbstractApiService {
         const wrappedCall = async () => {
           logger.debug(`${options.url}`);
 
-          const transaction = this.apmService.startTransaction({
-            op: options.url,
-            name: options.url,
-          });
-
           const result = await call();
 
           if (options.ttl !== undefined) {
@@ -67,7 +62,6 @@ export class AbstractApiService {
             });
           }
 
-          transaction?.finish();
           return result;
         };
 
