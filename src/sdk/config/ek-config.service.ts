@@ -30,8 +30,8 @@ export class EkConfigService
     this.moralisMasterKey = this.optional('MORALIS_MASTER_KEY');
     this.mongoHost = this.optional('MONGO_HOST', 'localhost');
     this.redisHost = this.optional('REDIS_HOST', 'localhost');
-    this.mongoPort = this.optional('MONGO_PORT', 27017);
-    this.redisPort = this.optional('REDIS_PORT', 6379);
+    this.mongoPort = Number(this.optional('MONGO_PORT', 27017));
+    this.redisPort = Number(this.optional('REDIS_PORT', 6379));
     this.mongoUser = this.optional('MONGO_USER', undefined);
     this.mongoPassword = this.optional('MONGO_PASSWORD', undefined);
     this.mongoDatabaseName = this.optional(
@@ -115,6 +115,7 @@ export class EkConfigService
       uri: `mongodb://${this.mongoHost}:${this.mongoPort}/${this.mongoDatabaseName}`,
       user: this.mongoUser,
       pass: this.mongoPassword,
+      directConnection: true,
     };
   }
 
