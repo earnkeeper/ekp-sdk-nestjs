@@ -115,7 +115,6 @@ export class EkConfigService
       uri: `mongodb://${this.mongoHost}:${this.mongoPort}/${this.mongoDatabaseName}`,
       user: this.mongoUser,
       pass: this.mongoPassword,
-      directConnection: true,
     };
   }
 
