@@ -114,6 +114,8 @@ export abstract class AbstractApiService {
         clientOptions: {
           host: this.configService.redisHost,
           port: this.configService.redisPort,
+          username: this.configService.redisUser,
+          password: this.configService.redisPassword,
         },
         clearDatastore: true,
       });
@@ -125,6 +127,8 @@ export abstract class AbstractApiService {
         clientOptions: {
           host: this.configService.redisHost,
           port: this.configService.redisPort,
+          username: this.configService.redisUser,
+          password: this.configService.redisPassword,
         },
         clearDatastore: true,
       });

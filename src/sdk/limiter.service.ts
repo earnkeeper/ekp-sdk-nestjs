@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import Bottleneck from 'bottleneck';
 import { RedisService } from 'nestjs-redis';
-import { Mutex, LockOptions } from 'redis-semaphore';
+import { LockOptions, Mutex } from 'redis-semaphore';
 import { EkConfigService } from './config/ek-config.service';
 
 @Injectable()
@@ -28,6 +28,8 @@ export class LimiterService {
         clientOptions: {
           host: this.configService.redisHost,
           port: this.configService.redisPort,
+          username: this.configService.redisUser,
+          password: this.configService.redisPassword,
         },
         clearDatastore: true,
       });
@@ -39,6 +41,8 @@ export class LimiterService {
         clientOptions: {
           host: this.configService.redisHost,
           port: this.configService.redisPort,
+          username: this.configService.redisUser,
+          password: this.configService.redisPassword,
         },
         clearDatastore: true,
       });

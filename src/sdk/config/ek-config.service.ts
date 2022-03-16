@@ -76,18 +76,24 @@ export class EkConfigService
             host: configService.redisHost,
             port: configService.redisPort,
             keepAlive: 30000,
+            username: configService.redisUser,
+            password: configService.redisPassword,
           },
           {
             name: 'PUBLISH_CLIENT',
             host: configService.redisHost,
             port: configService.redisPort,
             keepAlive: 30000,
+            username: configService.redisUser,
+            password: configService.redisPassword,
           },
           {
             name: 'SUBSCRIBE_CLIENT',
             host: configService.redisHost,
             port: configService.redisPort,
             keepAlive: 30000,
+            username: configService.redisUser,
+            password: configService.redisPassword,
           },
         ];
       },
@@ -107,6 +113,8 @@ export class EkConfigService
   createMongooseOptions(): MongooseModuleOptions {
     return {
       uri: `mongodb://${this.mongoHost}:${this.mongoPort}/${this.mongoDatabaseName}`,
+      user: this.mongoUser,
+      pass: this.mongoPassword,
     };
   }
 
