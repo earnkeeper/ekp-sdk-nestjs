@@ -8,6 +8,8 @@ import {
   LayerDto,
   RemoveLayersEvent,
   REMOVE_LAYERS,
+  RPC,
+  RpcEvent,
   UPDATE_METADATA,
 } from '@earnkeeper/ekp-sdk';
 import { InjectQueue } from '@nestjs/bull';
@@ -87,8 +89,26 @@ export class SocketService {
     });
   }
 
-  async queueClientStateChangedEvent(event: ClientStateChangedEvent) {
+  private async queueClientStateChangedEvent(event: ClientStateChangedEvent) {
     await this.clientEventQueue.add(CLIENT_STATE_CHANGED, event, {
+      removeOnComplete: true,
+    });
+  }
+
+  @SubscribeMessage('rpc')
+  handleRpcMessage(client: Socket, payload: any) {
+    logger.log(`Received RPC: ${client.id}`);
+
+    this.queueRpcEvent({
+      clientId: client.id,
+      received: moment().unix(),
+      rpc: JSON.parse(payload),
+    });
+  }
+
+  private async queueRpcEvent(event: RpcEvent) {
+    console.log(event);
+    await this.clientEventQueue.add(RPC, event, {
       removeOnComplete: true,
     });
   }

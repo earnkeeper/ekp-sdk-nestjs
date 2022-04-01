@@ -12,6 +12,8 @@ import {
   MenuElementDto,
   PageRouteDto,
   REMOVE_LAYERS,
+  RPC,
+  RpcEvent,
 } from '@earnkeeper/ekp-sdk';
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
@@ -31,11 +33,17 @@ export class ClientService {
   private readonly clientConnectedEventsSubject =
     new Subject<ClientConnectedEvent>();
 
+  private readonly rpcEventsSubject = new Subject<RpcEvent>();
+
   private readonly clientDisconnectedEventsSubject =
     new Subject<ClientDisconnectedEvent>();
 
   get clientStateEvents$(): Observable<ClientStateChangedEvent> {
     return this.clientStateEventsSubject as Observable<ClientStateChangedEvent>;
+  }
+
+  get rpcEvents$(): Observable<RpcEvent> {
+    return this.rpcEventsSubject as Observable<RpcEvent>;
   }
 
   get clientConnectedEvents$(): Observable<ClientConnectedEvent> {
@@ -138,7 +146,7 @@ export class ClientService {
   ) {
     return this.addLayers(clientEvent.clientId, [
       {
-        id: menu.id,
+        id: `menu-${menu.id}`,
         collectionName: 'menus',
         set: [menu],
         timestamp: moment().unix(),
@@ -152,7 +160,7 @@ export class ClientService {
   ) {
     return this.addLayers(clientEvent.clientId, [
       {
-        id: page.id,
+        id: `page-${page.id}`,
         collectionName: 'pages',
         set: [page],
         timestamp: moment().unix(),
@@ -208,6 +216,13 @@ export class ClientService {
     });
 
     this.clientStateEventsSubject.next(event);
+  }
+
+  @Process('rpc')
+  protected async processRpc(job: Job<RpcEvent>) {
+    const event = job.data;
+
+    this.rpcEventsSubject.next(event);
   }
 
   @Process(CLIENT_DISCONNECTED)
