@@ -24,7 +24,7 @@ import {
   TransactionSchema,
 } from './transaction/schema';
 import { TransactionService } from './transaction/transaction.service';
-import { WORKER_QUEUE } from './util';
+import { SCHEDULER_QUEUE, WORKER_QUEUE } from './util';
 import { ClientService, WorkerService } from './worker';
 import { ClientStateRepository } from './worker/client/client-state.repository';
 import { ClientState, ClientStateSchema } from './worker/client/schemas';
@@ -33,7 +33,11 @@ import { ClientState, ClientStateSchema } from './worker/client/schemas';
 @Module({
   imports: [
     BullModule.forRootAsync({ useClass: EkConfigService }),
-    BullModule.registerQueue({ name: OPENSEA_QUEUE }, { name: WORKER_QUEUE }),
+    BullModule.registerQueue(
+      { name: OPENSEA_QUEUE },
+      { name: WORKER_QUEUE },
+      { name: SCHEDULER_QUEUE },
+    ),
     CacheModule.registerAsync({ useClass: EkConfigService }),
     EkConfigModule,
     MongooseModule.forFeature([

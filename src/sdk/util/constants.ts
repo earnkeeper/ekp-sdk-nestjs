@@ -1,1 +1,2 @@
 export const WORKER_QUEUE = 'WORKER_QUEUE';
+export const SCHEDULER_QUEUE = 'SCHEDULER_QUEUE';

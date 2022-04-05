@@ -22,7 +22,7 @@ export async function runCluster(
   Cluster.register(maxWorkers, bootstrap);
 }
 
-class Cluster {
+export class Cluster {
   static register(workers: number, callback: () => Promise<void>): void {
     const cpus = os.cpus().length;
 
