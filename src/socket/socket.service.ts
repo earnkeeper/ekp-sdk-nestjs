@@ -133,6 +133,7 @@ export class SocketService {
       JSON.stringify({
         pluginId: this.configService.pluginId,
         layers: updatedLayers,
+        originalEvent: addLayersEvent.originalEvent,
       }),
     );
   }
@@ -148,6 +149,7 @@ export class SocketService {
       JSON.stringify({
         pluginId: this.configService.pluginId,
         query,
+        originalEvent: removeLayersEvent.originalEvent,
       }),
     );
   }

@@ -12,7 +12,6 @@ import {
   MenuElementDto,
   PageRouteDto,
   REMOVE_LAYERS,
-  RPC,
   RpcEvent,
 } from '@earnkeeper/ekp-sdk';
 import { Process, Processor } from '@nestjs/bull';
@@ -69,11 +68,32 @@ export class ClientService {
     this.publishClient = redisService.getClient('PUBLISH_CLIENT');
   }
 
-  addLayers(clientId: string, layers: LayerDto[]): Promise<number> {
+  addLayers(
+    event: ClientStateChangedEvent | ClientConnectedEvent,
+    layers: LayerDto[],
+  ): Promise<number> {
+    const changedEvent = event as ClientStateChangedEvent;
+
+    if (!changedEvent.state) {
+      return this.publishClient.publish(
+        ADD_LAYERS,
+        JSON.stringify({
+          clientId: event.clientId,
+          originalEvent: undefined,
+          layers,
+        }),
+      );
+    }
+
     return this.publishClient.publish(
       ADD_LAYERS,
       JSON.stringify({
-        clientId,
+        clientId: changedEvent.clientId,
+        originalEvent: {
+          sent: changedEvent.sent,
+          gameId: changedEvent.state.client.gameId,
+          path: changedEvent.state.client.path,
+        },
         layers,
       }),
     );
@@ -87,7 +107,7 @@ export class ClientService {
         set: [{ id: collectionName }],
       },
     ];
-    await this.addLayers(event.clientId, addLayers);
+    await this.addLayers(event, addLayers);
   }
 
   /**
@@ -104,7 +124,7 @@ export class ClientService {
     collectionName: string,
     documents: DocumentDto[],
   ) {
-    return this.addLayers(clientEvent.clientId, [
+    return this.addLayers(clientEvent, [
       {
         id: `${collectionName}-documents`,
         collectionName,
@@ -129,7 +149,7 @@ export class ClientService {
     collectionName: string,
     documents: DocumentDto[],
   ) {
-    return this.addLayers(clientEvent.clientId, [
+    return this.addLayers(clientEvent, [
       {
         id: uuidv4(),
         collectionName,
@@ -144,7 +164,7 @@ export class ClientService {
     clientEvent: ClientConnectedEvent | ClientStateChangedEvent,
     menu: MenuElementDto,
   ) {
-    return this.addLayers(clientEvent.clientId, [
+    return this.addLayers(clientEvent, [
       {
         id: `menu-${menu.id}`,
         collectionName: 'menus',
@@ -158,7 +178,7 @@ export class ClientService {
     clientEvent: ClientConnectedEvent | ClientStateChangedEvent,
     page: PageRouteDto,
   ) {
-    return this.addLayers(clientEvent.clientId, [
+    return this.addLayers(clientEvent, [
       {
         id: `page-${page.id}`,
         collectionName: 'pages',
@@ -173,27 +193,35 @@ export class ClientService {
       id: `busy-${collectionName}`,
     };
 
-    await this.removeLayers(event.clientId, removeQuery);
+    await this.removeLayers(event, removeQuery);
   }
 
-  removeLayers(clientId: string, query: LayerQueryDto): Promise<number> {
+  removeLayers(
+    event: ClientStateChangedEvent,
+    query: LayerQueryDto,
+  ): Promise<number> {
     return this.publishClient.publish(
       REMOVE_LAYERS,
       JSON.stringify({
-        clientId,
+        clientId: event.clientId,
+        originalEvent: {
+          sent: event.sent,
+          gameId: event.state.client.gameId,
+          path: event.state.client.path,
+        },
         query,
       }),
     );
   }
 
   async removeOldLayers(
-    clientStateChangedEvent: ClientStateChangedEvent,
+    event: ClientStateChangedEvent,
     collectionName: string,
   ) {
-    await this.removeLayers(clientStateChangedEvent.clientId, {
+    await this.removeLayers(event, {
       tags: [collectionName],
       timestamp: {
-        lt: clientStateChangedEvent.received,
+        lt: event.received,
       },
     });
   }
@@ -211,6 +239,7 @@ export class ClientService {
 
     await this.clientStateRepository.save({
       clientId: event.clientId,
+      sent: event.sent,
       received: event.received,
       state: event.state,
     });

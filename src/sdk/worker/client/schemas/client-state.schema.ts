@@ -9,6 +9,9 @@ export class ClientState {
   @Prop({ index: true })
   clientId: string;
 
+  @Prop()
+  sent: number;
+
   @Prop({ index: true })
   received: number;
 
