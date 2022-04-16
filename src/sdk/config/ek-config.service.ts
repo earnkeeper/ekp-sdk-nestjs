@@ -8,19 +8,12 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  MongooseModuleOptions,
-  MongooseOptionsFactory,
-} from '@nestjs/mongoose';
 import * as redisStore from 'cache-manager-redis-store';
 import { RedisModuleAsyncOptions } from 'nestjs-redis';
 
 @Injectable()
 export class EkConfigService
-  implements
-    CacheOptionsFactory,
-    MongooseOptionsFactory,
-    SharedBullConfigurationFactory
+  implements CacheOptionsFactory, SharedBullConfigurationFactory
 {
   constructor(private configService: ConfigService) {
     this.pluginId = this.required('EKP_PLUGIN_ID');
@@ -28,16 +21,8 @@ export class EkConfigService
     this.moralisServerUrl = this.optional('MORALIS_SERVER_URL');
     this.moralisAppId = this.optional('MORALIS_APP_ID');
     this.moralisMasterKey = this.optional('MORALIS_MASTER_KEY');
-    this.mongoHost = this.optional('MONGO_HOST', 'localhost');
     this.redisHost = this.optional('REDIS_HOST', 'localhost');
-    this.mongoPort = Number(this.optional('MONGO_PORT', 27017));
     this.redisPort = Number(this.optional('REDIS_PORT', 6379));
-    this.mongoUser = this.optional('MONGO_USER', undefined);
-    this.mongoPassword = this.optional('MONGO_PASSWORD', undefined);
-    this.mongoDatabaseName = this.optional(
-      'MONGO_DB_NAME',
-      `ekp-${this.pluginId}`,
-    );
     this.redisUser = this.optional('REDIS_USER', undefined);
     this.redisPassword = this.optional('REDIS_PASSWORD', undefined);
     this.openseaApiKey = this.optional('OPENSEA_API_KEY', undefined);
@@ -51,11 +36,6 @@ export class EkConfigService
   readonly moralisServerUrl: string;
   readonly moralisAppId: string;
   readonly moralisMasterKey: string;
-  readonly mongoHost: string;
-  readonly mongoPort: number;
-  readonly mongoUser: string;
-  readonly mongoPassword: string;
-  readonly mongoDatabaseName: string;
   readonly redisHost: string;
   readonly redisPort: number;
   readonly redisUser: string;
@@ -107,14 +87,6 @@ export class EkConfigService
       host: this.redisHost,
       port: this.redisPort,
       ttl: 0,
-    };
-  }
-
-  createMongooseOptions(): MongooseModuleOptions {
-    return {
-      uri: `mongodb://${this.mongoHost}:${this.mongoPort}/${this.mongoDatabaseName}`,
-      user: this.mongoUser,
-      pass: this.mongoPassword,
     };
   }
 

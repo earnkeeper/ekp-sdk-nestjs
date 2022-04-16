@@ -22,7 +22,6 @@ import { RedisService } from 'nestjs-redis';
 import { Observable, Subject } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 import { WORKER_QUEUE } from '../../util';
-import { ClientStateRepository } from './client-state.repository';
 
 @Processor(WORKER_QUEUE)
 export class ClientService {
@@ -55,16 +54,9 @@ export class ClientService {
       .clientDisconnectedEventsSubject as Observable<ClientDisconnectedEvent>;
   }
 
-  get latestClientStateEvents(): Promise<ClientStateChangedEvent[]> {
-    return this.clientStateRepository.findAll();
-  }
-
   private readonly publishClient: Redis;
 
-  constructor(
-    private clientStateRepository: ClientStateRepository,
-    redisService: RedisService,
-  ) {
+  constructor(redisService: RedisService) {
     this.publishClient = redisService.getClient('PUBLISH_CLIENT');
   }
 
@@ -237,13 +229,6 @@ export class ClientService {
   protected async processClientStateChanged(job: Job<ClientStateChangedEvent>) {
     const event = job.data;
 
-    await this.clientStateRepository.save({
-      clientId: event.clientId,
-      sent: event.sent,
-      received: event.received,
-      state: event.state,
-    });
-
     this.clientStateEventsSubject.next(event);
   }
 
@@ -257,10 +242,6 @@ export class ClientService {
   @Process(CLIENT_DISCONNECTED)
   protected async processClientDisconnected(job: Job<ClientDisconnectedEvent>) {
     const event = job.data;
-
-    const clientId = job.data?.clientId;
-
-    await this.clientStateRepository.delete(clientId);
 
     this.clientDisconnectedEventsSubject.next(event);
   }

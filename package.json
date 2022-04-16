@@ -1,6 +1,6 @@
 {
   "name": "@earnkeeper/ekp-sdk-nestjs",
-  "version": "1.1.12",
+  "version": "2.0.0",
   "description": "The Nest.js software development kit for EarnKeeper.io plugins",
   "homepage": "https://github.com/earnkeeper/ekp-sdk-nestjs#readme",
   "repository": {
@@ -30,7 +30,6 @@
     "@nestjs/config": "^1.1.6",
     "@nestjs/core": "^8.2.5",
     "@nestjs/event-emitter": "^1.0.0",
-    "@nestjs/mongoose": "^9.0.1",
     "@nestjs/platform-express": "^8.0.0",
     "@nestjs/platform-socket.io": "^8.2.0",
     "@nestjs/typeorm": "^8.0.2",
@@ -45,7 +44,6 @@
     "cache-manager": "^3.6.0",
     "cache-manager-redis-store": "^2.0.0",
     "dotenv": "^10.0.0",
-    "mongoose": "^6.1.2",
     "moralis": "1.2.6",
     "nestjs-redis": "git+https://github.com/earnkeeper/nestjs-redis#f699937",
     "redis-semaphore": "^4.1.0",
