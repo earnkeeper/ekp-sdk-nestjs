@@ -111,6 +111,8 @@ export class EkConfigService
       store: redisStore,
       host: this.redisHost,
       port: this.redisPort,
+      username: this.redisUser,
+      password: this.redisPassword,
       db: this.redisDb,
       ttl: 0,
     };
@@ -129,6 +131,8 @@ export class EkConfigService
       redis: {
         host: this.redisHost,
         port: this.redisPort,
+        username: this.redisUser,
+        password: this.redisPassword,
         db: this.redisDb,
       },
     };
