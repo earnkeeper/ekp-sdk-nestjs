@@ -32,6 +32,7 @@ export class EkConfigService
     this.redisHost = this.optional('REDIS_HOST', 'localhost');
     this.mongoPort = Number(this.optional('MONGO_PORT', 27017));
     this.redisPort = Number(this.optional('REDIS_PORT', 6379));
+    this.redisDb = Number(this.optional('REDIS_DB', 0));
     this.mongoUser = this.optional('MONGO_USER', undefined);
     this.mongoPassword = this.optional('MONGO_PASSWORD', undefined);
     this.mongoDatabaseName = this.optional(
@@ -58,6 +59,7 @@ export class EkConfigService
   readonly mongoDatabaseName: string;
   readonly redisHost: string;
   readonly redisPort: number;
+  readonly redisDb: number;
   readonly redisUser: string;
   readonly redisPassword: string;
   readonly openseaApiKey: string;
@@ -78,6 +80,7 @@ export class EkConfigService
             keepAlive: 30000,
             username: configService.redisUser,
             password: configService.redisPassword,
+            db: configService.redisDb,
           },
           {
             name: 'PUBLISH_CLIENT',
@@ -86,6 +89,7 @@ export class EkConfigService
             keepAlive: 30000,
             username: configService.redisUser,
             password: configService.redisPassword,
+            db: configService.redisDb,
           },
           {
             name: 'SUBSCRIBE_CLIENT',
@@ -94,6 +98,7 @@ export class EkConfigService
             keepAlive: 30000,
             username: configService.redisUser,
             password: configService.redisPassword,
+            db: configService.redisDb,
           },
         ];
       },
@@ -106,6 +111,7 @@ export class EkConfigService
       store: redisStore,
       host: this.redisHost,
       port: this.redisPort,
+      db: this.redisDb,
       ttl: 0,
     };
   }
@@ -123,8 +129,8 @@ export class EkConfigService
       redis: {
         host: this.redisHost,
         port: this.redisPort,
+        db: this.redisDb,
       },
-      prefix: `v1_`,
     };
   }
 
