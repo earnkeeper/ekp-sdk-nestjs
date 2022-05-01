@@ -23,6 +23,7 @@ export class EkConfigService
     this.moralisMasterKey = this.optional('MORALIS_MASTER_KEY');
     this.redisHost = this.optional('REDIS_HOST', 'localhost');
     this.redisPort = Number(this.optional('REDIS_PORT', 6379));
+    this.redisDb = Number(this.optional('REDIS_DB', 0));
     this.redisUser = this.optional('REDIS_USER', undefined);
     this.redisPassword = this.optional('REDIS_PASSWORD', undefined);
     this.openseaApiKey = this.optional('OPENSEA_API_KEY', undefined);
@@ -38,6 +39,7 @@ export class EkConfigService
   readonly moralisMasterKey: string;
   readonly redisHost: string;
   readonly redisPort: number;
+  readonly redisDb: number;
   readonly redisUser: string;
   readonly redisPassword: string;
   readonly openseaApiKey: string;
@@ -58,6 +60,7 @@ export class EkConfigService
             keepAlive: 30000,
             username: configService.redisUser,
             password: configService.redisPassword,
+            db: configService.redisDb,
           },
           {
             name: 'PUBLISH_CLIENT',
@@ -66,6 +69,7 @@ export class EkConfigService
             keepAlive: 30000,
             username: configService.redisUser,
             password: configService.redisPassword,
+            db: configService.redisDb,
           },
           {
             name: 'SUBSCRIBE_CLIENT',
@@ -74,6 +78,7 @@ export class EkConfigService
             keepAlive: 30000,
             username: configService.redisUser,
             password: configService.redisPassword,
+            db: configService.redisDb,
           },
         ];
       },
@@ -86,6 +91,9 @@ export class EkConfigService
       store: redisStore,
       host: this.redisHost,
       port: this.redisPort,
+      username: this.redisUser,
+      password: this.redisPassword,
+      db: this.redisDb,
       ttl: 0,
     };
   }
@@ -95,8 +103,10 @@ export class EkConfigService
       redis: {
         host: this.redisHost,
         port: this.redisPort,
+        username: this.redisUser,
+        password: this.redisPassword,
+        db: this.redisDb,
       },
-      prefix: `v1_`,
     };
   }
 
