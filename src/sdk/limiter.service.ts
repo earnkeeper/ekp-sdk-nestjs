@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import Bottleneck from 'bottleneck';
 import { RedisService } from 'nestjs-redis';
-import { LockOptions, Mutex } from 'redis-semaphore';
 import { EkConfigService } from './config/ek-config.service';
 
 @Injectable()
@@ -10,11 +9,6 @@ export class LimiterService {
     private configService: EkConfigService,
     private redisService: RedisService,
   ) {}
-
-  createMutex(id: string, options?: LockOptions) {
-    const redisClient = this.redisService.getClient('DEFAULT_CLIENT');
-    return new Mutex(redisClient, id, options);
-  }
 
   createLimiter(id: string, options: number | Bottleneck.ConstructorOptions) {
     if (typeof options === 'number') {

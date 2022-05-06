@@ -4,10 +4,7 @@ import axios from 'axios';
 import { validate } from 'bycontract';
 import _ from 'lodash';
 import moment from 'moment';
-import { Mutex } from 'redis-semaphore';
 import { AbstractApiService } from '../api/abstract-api.service';
-import { LimiterService } from '../limiter.service';
-import { logger } from '../util';
 import { getAndHandle } from '../util/axios';
 import { CoinPrice as CoinPriceDto } from './model/coin-price';
 const BASE_URL = 'https://api.coingecko.com/api/v3';
@@ -20,9 +17,7 @@ interface GeckoCoin {
 
 @Injectable()
 export class CoingeckoService extends AbstractApiService {
-  private fetchAllCoinsMutex: Mutex;
-
-  constructor(limiterService: LimiterService) {
+  constructor() {
     super({
       name: 'CoingeckoService',
       limit: {
@@ -33,32 +28,6 @@ export class CoingeckoService extends AbstractApiService {
         reservoirRefreshInterval: 60000,
       },
     });
-
-    this.fetchAllCoinsMutex = limiterService.createMutex(
-      `${CoingeckoService.name}-fetchallcoins`,
-    );
-  }
-
-  async onModuleInit() {
-    super.onModuleInit();
-
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
-
-    if (this.fetchAllCoinsMutex.isAcquired) {
-      return;
-    }
-
-    try {
-      await this.fetchAllCoinsMutex.acquire();
-
-      this.allCoins = await this.fetchGeckoCoins();
-    } finally {
-      await this.fetchAllCoinsMutex.release();
-    }
-
-    logger.log('Coingecko service initialized');
   }
 
   private platforms = {
@@ -67,10 +36,12 @@ export class CoingeckoService extends AbstractApiService {
     polygon: 'polygon-pos',
   };
 
-  coinIdOf(chainId: ChainId, contractAddress: string) {
+  async coinIdOf(chainId: ChainId, contractAddress: string) {
     validate([chainId, contractAddress], ['string', 'string']);
     const platform = this.platforms[chainId];
-    return this.allCoins.find(
+    const allCoins = await this.fetchGeckoCoins();
+
+    return allCoins.find(
       (geckoCoin) =>
         geckoCoin.platforms[platform] === contractAddress?.toLowerCase(),
     )?.id;
@@ -247,8 +218,6 @@ export class CoingeckoService extends AbstractApiService {
       },
     );
   }
-
-  private allCoins: GeckoCoin[];
 
   private async fetchGeckoCoins(): Promise<GeckoCoin[]> {
     const url = `${BASE_URL}/coins/list?include_platform=true`;
